@@ -1,6 +1,203 @@
+# Type signatures for rbs-merge gem
+# Smart merge for RBS type signature files using AST analysis
+
 module Rbs
   module Merge
     VERSION: String
-    # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+    # Base error class for rbs-merge errors
+    class Error < StandardError
+    end
+
+    # Error raised when template RBS file has syntax errors
+    class TemplateParseError < Error
+      attr_reader errors: Array[RBS::BaseError]
+
+      def initialize: (Array[RBS::BaseError] errors) -> void
+    end
+
+    # Error raised when destination RBS file has syntax errors
+    class DestinationParseError < Error
+      attr_reader errors: Array[RBS::BaseError]
+
+      def initialize: (Array[RBS::BaseError] errors) -> void
+    end
+
+    # Debug logging utility
+    module DebugLogger
+      extend Ast::Merge::DebugLogger
+
+      BENCHMARK_AVAILABLE: bool
+      ENV_VAR_NAME: String
+      LOG_PREFIX: String
+
+      def self.enabled?: () -> bool
+      def self.debug: (String message, ?Hash[Symbol, untyped] context) -> void
+      def self.info: (String message) -> void
+      def self.warning: (String message) -> void
+      def self.warn: (String message) -> void
+      def self.time: [T] (String operation) { () -> T } -> T
+    end
+
+    # Freeze block node for RBS files
+    class FreezeNode < Ast::Merge::FreezeNode
+      InvalidStructureError: singleton(Ast::Merge::FreezeNode::InvalidStructureError)
+      Location: singleton(Ast::Merge::FreezeNode::Location)
+
+      attr_reader nodes: Array[RBS::AST::Declarations::Base | RBS::AST::Members::Base]
+
+      def initialize: (
+        start_line: Integer,
+        end_line: Integer,
+        analysis: FileAnalysis,
+        ?nodes: Array[RBS::AST::Declarations::Base | RBS::AST::Members::Base],
+        ?overlapping_nodes: Array[RBS::AST::Declarations::Base | RBS::AST::Members::Base]?,
+        ?start_marker: String?,
+        ?end_marker: String?,
+        ?pattern_type: Symbol
+      ) -> void
+
+      def signature: () -> Array[untyped]
+      def inspect: () -> String
+
+      private
+
+      def validate_structure!: () -> void
+    end
+
+    # Merge result container
+    class MergeResult < Ast::Merge::MergeResult
+      DECISION_FREEZE_BLOCK: Symbol
+      DECISION_TEMPLATE: Symbol
+      DECISION_DESTINATION: Symbol
+      DECISION_ADDED: Symbol
+      DECISION_RECURSIVE: Symbol
+
+      attr_reader template_analysis: FileAnalysis
+      attr_reader dest_analysis: FileAnalysis
+      attr_reader decisions: Array[Hash[Symbol, untyped]]
+      attr_reader content: Array[String]
+
+      def initialize: (FileAnalysis template_analysis, FileAnalysis dest_analysis) -> void
+
+      def add_from_template: (Integer index, ?decision: Symbol) -> void
+      def add_from_destination: (Integer index, ?decision: Symbol) -> void
+      def add_freeze_block: (FreezeNode freeze_node) -> void
+      def add_recursive_merge: (String merged_content, template_index: Integer, dest_index: Integer) -> void
+      def add_raw: (Array[String] lines, decision: Symbol) -> void
+      def to_s: () -> String
+      def empty?: () -> bool
+      def summary: () -> Hash[Symbol, untyped]
+
+      private
+
+      def extract_lines: (untyped statement, FileAnalysis analysis) -> Array[String]
+    end
+
+    # File analysis for RBS files
+    class FileAnalysis
+      DEFAULT_FREEZE_TOKEN: String
+
+      attr_reader buffer: RBS::Buffer
+      attr_reader directives: Array[RBS::AST::Directives::Base]
+      attr_reader declarations: Array[RBS::AST::Declarations::Base]
+      attr_reader source: String
+      attr_reader lines: Array[String]
+      attr_reader freeze_token: String
+      attr_reader signature_generator: (^(untyped) -> (Array[untyped] | untyped | nil))?
+      attr_reader statements: Array[RBS::AST::Declarations::Base | FreezeNode]
+
+      def initialize: (
+        String source,
+        ?freeze_token: String,
+        ?signature_generator: (^(untyped) -> (Array[untyped] | untyped | nil))?
+      ) -> void
+
+      def valid?: () -> bool
+      def freeze_blocks: () -> Array[FreezeNode]
+      def line_at: (Integer line_number) -> String?
+      def normalized_line: (Integer line_number) -> String?
+      def signature_at: (Integer index) -> Array[untyped]?
+      def generate_signature: (untyped node) -> Array[untyped]?
+      def compute_node_signature: (untyped node) -> Array[untyped]?
+
+      private
+
+      def extract_and_integrate_all_nodes: () -> Array[untyped]
+      def find_freeze_markers: () -> Array[Hash[Symbol, untyped]]
+      def build_freeze_blocks: (Array[Hash[Symbol, untyped]] markers) -> Array[FreezeNode]
+      def find_contained_nodes: (Integer start_line, Integer end_line) -> Array[untyped]
+      def find_overlapping_nodes: (Integer start_line, Integer end_line) -> Array[untyped]
+      def integrate_nodes_with_freeze_blocks: (Array[untyped] declarations, Array[FreezeNode] freeze_blocks) -> Array[untyped]
+    end
+
+    # Conflict resolver for merge operations
+    class ConflictResolver
+      attr_reader preference: (Symbol | Hash[Symbol, Symbol])
+      attr_reader template_analysis: FileAnalysis
+      attr_reader dest_analysis: FileAnalysis
+
+      def initialize: (
+        preference: (Symbol | Hash[Symbol, Symbol]),
+        template_analysis: FileAnalysis,
+        dest_analysis: FileAnalysis
+      ) -> void
+
+      def resolve: (
+        untyped template_decl,
+        untyped dest_decl,
+        template_index: Integer,
+        dest_index: Integer
+      ) -> Hash[Symbol, untyped]
+
+      def declarations_identical?: (untyped decl1, untyped decl2) -> bool
+      def can_recursive_merge?: (untyped template_decl, untyped dest_decl) -> bool
+    end
+
+    # File aligner for matching declarations
+    class FileAligner
+      attr_reader template_analysis: FileAnalysis
+      attr_reader dest_analysis: FileAnalysis
+
+      def initialize: (FileAnalysis template_analysis, FileAnalysis dest_analysis) -> void
+
+      def align: () -> Array[Hash[Symbol, untyped]]
+
+      private
+
+      def build_signature_map: (Array[untyped] statements, FileAnalysis analysis) -> Hash[Array[untyped], Array[Integer]]
+      def sort_alignment: (Array[Hash[Symbol, untyped]] alignment) -> Array[Hash[Symbol, untyped]]
+    end
+
+    # Smart merger orchestrator
+    class SmartMerger
+      attr_reader template_analysis: FileAnalysis
+      attr_reader dest_analysis: FileAnalysis
+      attr_reader aligner: FileAligner
+      attr_reader resolver: ConflictResolver
+      attr_reader result: MergeResult
+
+      def initialize: (
+        String template_content,
+        String dest_content,
+        ?signature_generator: (^(untyped) -> (Array[untyped] | untyped | nil))?,
+        ?signature_match_preference: (Symbol | Hash[Symbol, Symbol]),
+        ?add_template_only_nodes: bool,
+        ?freeze_token: String,
+        ?max_recursion_depth: Integer | Float,
+        ?node_splitter: (Hash[Symbol, untyped])?
+      ) -> void
+
+      def merge: () -> MergeResult
+
+      private
+
+      def process_alignment: (Array[Hash[Symbol, untyped]] alignment) -> void
+      def process_match: (Hash[Symbol, untyped] entry) -> void
+      def process_template_only: (Hash[Symbol, untyped] entry) -> void
+      def process_dest_only: (Hash[Symbol, untyped] entry) -> void
+      def process_recursive_merge: (Hash[Symbol, untyped] entry, Hash[Symbol, untyped] resolution) -> void
+      def reconstruct_declaration_with_merged_members: (untyped template_decl, untyped dest_decl, Integer template_index, Integer dest_index) -> String
+    end
   end
 end
