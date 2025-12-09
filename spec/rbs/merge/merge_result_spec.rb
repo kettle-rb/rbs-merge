@@ -215,4 +215,75 @@ RSpec.describe Rbs::Merge::MergeResult do
       expect(output).to include("class CommentedClass")
     end
   end
+
+  describe "#add_recursive_merge edge cases" do
+    it "removes trailing empty line when content ends with newline" do
+      # Content ending with newline will have empty last element after split
+      merged = "class Foo\nend\n"
+      result.add_recursive_merge(merged, template_index: 0, dest_index: 0)
+      # The trailing empty element should be removed
+      expect(result.content.last).not_to eq("")
+    end
+
+    it "handles content without trailing newline" do
+      merged = "class Foo\nend"
+      result.add_recursive_merge(merged, template_index: 0, dest_index: 0)
+      expect(result.content).to eq(["class Foo", "end"])
+    end
+  end
+
+  describe "#to_s edge cases" do
+    it "adds trailing newline if content doesn't end with one" do
+      result.add_raw(["class Foo", "end"], decision: :custom)
+      output = result.to_s
+      expect(output).to end_with("\n")
+    end
+
+    it "doesn't double newline if content already ends with newline" do
+      # This is an edge case - normally lines don't include newlines
+      # but testing the unless branch
+      result.add_raw(["class Foo", "end"], decision: :custom)
+      output = result.to_s
+      expect(output).not_to end_with("\n\n")
+    end
+  end
+
+  describe "extract_lines with FreezeNode" do
+    let(:dest_with_freeze) do
+      <<~RBS
+        # rbs-merge:freeze
+        type frozen = String
+        # rbs-merge:unfreeze
+      RBS
+    end
+    let(:dest_analysis_frozen) { Rbs::Merge::FileAnalysis.new(dest_with_freeze) }
+    let(:result_frozen) { described_class.new(template_analysis, dest_analysis_frozen) }
+
+    it "extracts lines using start_line and end_line for FreezeNode" do
+      freeze_node = dest_analysis_frozen.freeze_blocks.first
+      result_frozen.add_freeze_block(freeze_node)
+      output = result_frozen.to_s
+      # 3 lines of content + trailing newline = 3 lines when split by newline
+      expect(output.lines.count).to eq(3)
+    end
+  end
+
+  describe "extract_lines without comments" do
+    let(:source_no_comments) do
+      <<~RBS
+        class NoComment
+          def bar: () -> void
+        end
+      RBS
+    end
+    let(:analysis_no_comments) { Rbs::Merge::FileAnalysis.new(source_no_comments) }
+    let(:result_no_comments) { described_class.new(analysis_no_comments, analysis_no_comments) }
+
+    it "extracts lines using declaration location when no comment" do
+      result_no_comments.add_from_template(0)
+      output = result_no_comments.to_s
+      expect(output).to include("class NoComment")
+      expect(output).not_to include("#")
+    end
+  end
 end

@@ -164,6 +164,48 @@ RSpec.describe Rbs::Merge::FreezeNode do
         expect { Rbs::Merge::FileAnalysis.new(invalid_source) }
           .to raise_error(described_class::InvalidStructureError)
       end
+
+      it "includes node names in error message" do
+        expect { Rbs::Merge::FileAnalysis.new(invalid_source) }
+          .to raise_error(described_class::InvalidStructureError, /Foo.*lines/)
+      end
+    end
+
+    context "with partial overlap and node without name method" do
+      # Test the else branch in validate_structure! (line 103)
+      # where node.respond_to?(:name) is false
+      it "uses class name when node doesn't respond to :name" do
+        # Create a freeze node with a mock node that doesn't have :name
+        source = <<~RBS
+          class Foo
+          end
+        RBS
+        analysis = Rbs::Merge::FileAnalysis.new(source)
+
+        # Create a mock node without :name method that partially overlaps
+        # Freeze block: lines 2-4, Node: lines 1-3 (partial overlap)
+        nameless_node = double(
+          "NamelessNode",
+          location: double(start_line: 1, end_line: 3),
+        )
+        # Explicitly make it NOT respond to :name
+        allow(nameless_node).to receive(:respond_to?).with(:name).and_return(false)
+
+        # Validation happens during initialize, so the error is raised there
+        # Freeze block lines 2-4, node lines 1-3 creates partial overlap:
+        # - NOT fully_contained (node starts before freeze block)
+        # - NOT encompasses (node doesn't end after freeze block)
+        # - NOT fully_outside (overlaps at lines 2-3)
+        expect {
+          described_class.new(
+            start_line: 2,
+            end_line: 4,
+            analysis: analysis,
+            nodes: [],
+            overlapping_nodes: [nameless_node],
+          )
+        }.to raise_error(described_class::InvalidStructureError, /Double/)
+      end
     end
 
     context "with fully contained declaration" do

@@ -189,13 +189,13 @@ module Rbs
                 end_marker: marker[:text],
               )
             else
-              DebugLogger.warn("Unmatched freeze end marker at line #{marker[:line]}")
+              DebugLogger.warning("Unmatched freeze end marker at line #{marker[:line]}")
             end
           end
         end
 
         stack.each do |unmatched|
-          DebugLogger.warn("Unmatched freeze start marker at line #{unmatched[:line]}")
+          DebugLogger.warning("Unmatched freeze start marker at line #{unmatched[:line]}")
         end
 
         blocks

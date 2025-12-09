@@ -443,4 +443,58 @@ RSpec.describe Rbs::Merge::SmartMerger do
       expect(result.to_s).to include("# Destination comment")
     end
   end
+
+  describe "merge_result caching" do
+    let(:template) { "class Foo\nend\n" }
+    let(:destination) { "class Bar\nend\n" }
+
+    it "caches the merge_result on subsequent calls" do
+      merger = described_class.new(template, destination)
+      result1 = merger.merge_result
+      result2 = merger.merge_result
+      expect(result1).to be(result2) # Same object identity
+    end
+  end
+
+  describe "process_match with :template source resolution" do
+    let(:template) do
+      <<~RBS
+        type my_alias = String
+      RBS
+    end
+    let(:destination) do
+      <<~RBS
+        type my_alias = Integer
+      RBS
+    end
+
+    it "uses template content when signature_match_preference is :template" do
+      merger = described_class.new(template, destination, signature_match_preference: :template)
+      result = merger.merge_result
+      expect(result.to_s).to include("type my_alias = String")
+      expect(result.to_s).not_to include("Integer")
+    end
+  end
+
+  describe "process_match with FreezeNode in matched entry" do
+    let(:template) do
+      <<~RBS
+        type frozen_type = String
+      RBS
+    end
+    let(:destination) do
+      <<~RBS
+        # rbs-merge:freeze
+        type frozen_type = Integer | Symbol
+        # rbs-merge:unfreeze
+      RBS
+    end
+
+    it "uses freeze block content even when template has matching declaration" do
+      merger = described_class.new(template, destination)
+      result = merger.merge_result
+      expect(result.to_s).to include("type frozen_type = Integer | Symbol")
+      expect(result.to_s).to include("rbs-merge:freeze")
+    end
+  end
 end

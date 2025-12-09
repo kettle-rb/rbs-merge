@@ -446,4 +446,73 @@ RSpec.describe Rbs::Merge::FileAnalysis do
       end
     end
   end
+
+  describe "freeze marker edge cases" do
+    context "with unmatched freeze end marker" do
+      let(:source) do
+        <<~RBS
+          class Foo
+          end
+          # rbs-merge:unfreeze
+        RBS
+      end
+
+      it "warns about unmatched end marker but still parses" do
+        expect(Rbs::Merge::DebugLogger).to receive(:warning).with(/Unmatched freeze end marker/)
+        analysis = described_class.new(source)
+        expect(analysis.valid?).to be true
+        expect(analysis.statements.size).to eq(1)
+      end
+    end
+
+    context "with unmatched freeze start marker" do
+      let(:source) do
+        <<~RBS
+          # rbs-merge:freeze
+          class Foo
+          end
+        RBS
+      end
+
+      it "warns about unmatched start marker but still parses" do
+        expect(Rbs::Merge::DebugLogger).to receive(:warning).with(/Unmatched freeze start marker/)
+        analysis = described_class.new(source)
+        expect(analysis.valid?).to be true
+      end
+    end
+
+    context "with invalid marker type" do
+      let(:source) do
+        <<~RBS
+          # rbs-merge:invalid
+          class Foo
+          end
+        RBS
+      end
+
+      it "ignores invalid marker types" do
+        analysis = described_class.new(source)
+        expect(analysis.valid?).to be true
+        # No freeze blocks created for invalid marker
+        expect(analysis.statements.none? { |s| s.is_a?(Rbs::Merge::FreezeNode) }).to be true
+      end
+    end
+
+    context "with no freeze markers" do
+      let(:source) do
+        <<~RBS
+          class Foo
+          end
+          class Bar
+          end
+        RBS
+      end
+
+      it "returns declarations without modification" do
+        analysis = described_class.new(source)
+        expect(analysis.statements.size).to eq(2)
+        expect(analysis.statements).to all(be_a(RBS::AST::Declarations::Class))
+      end
+    end
+  end
 end
