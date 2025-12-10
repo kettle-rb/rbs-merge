@@ -67,7 +67,7 @@ Rbs::Merge is a standalone Ruby module that intelligently merges two versions of
 - **Standalone**: Minimal dependencies - just `rbs` and `ast-merge`
 - **Customizable**:
   - `signature_generator` - callable custom signature generators
-  - `signature_match_preference` - setting of `:template`, `:destination`, or a Hash for per-node-type preferences
+  - `preference` - setting of `:template`, `:destination`, or a Hash for per-node-type preferences
   - `node_splitter` - Hash mapping node types to callables for per-node-type merge customization (see [ast-merge](https://github.com/kettle-rb/ast-merge) docs)
   - `add_template_only_nodes` - setting to retain declarations that do not exist in destination
   - `freeze_token` - customize freeze block markers (default: `"rbs-merge"`)
@@ -272,14 +272,14 @@ Control which version to use when declarations have matching signatures but diff
 merger = Rbs::Merge::SmartMerger.new(
   template,
   destination,
-  signature_match_preference: :template,
+  preference: :template,
 )
 
 # Use destination version (for preserving local type customizations)
 merger = Rbs::Merge::SmartMerger.new(
   template,
   destination,
-  signature_match_preference: :destination,  # This is the default
+  preference: :destination,  # This is the default
 )
 ```
 
@@ -335,7 +335,7 @@ For different merge scenarios:
 merger = Rbs::Merge::SmartMerger.new(
   generated_rbs,
   existing_rbs,
-  signature_match_preference: :template,
+  preference: :template,
   add_template_only_nodes: true,
 )
 # Result: All type definitions updated to match generated, new types added
@@ -344,7 +344,7 @@ merger = Rbs::Merge::SmartMerger.new(
 merger = Rbs::Merge::SmartMerger.new(
   library_types,
   custom_types,
-  signature_match_preference: :destination,  # default
+  preference: :destination,  # default
   add_template_only_nodes: false,             # default
 )
 # Result: Custom type refinements preserved, template-only types skipped
@@ -353,7 +353,7 @@ merger = Rbs::Merge::SmartMerger.new(
 merger = Rbs::Merge::SmartMerger.new(
   template_types,
   project_types,
-  signature_match_preference: :destination,  # Keep custom type refinements
+  preference: :destination,  # Keep custom type refinements
   add_template_only_nodes: true,              # But add new type definitions
 )
 # Result: Existing types keep destination definitions, new types added from template
@@ -488,7 +488,7 @@ existing = File.read("sig/my_class.rbs")
 merger = Rbs::Merge::SmartMerger.new(
   generated,
   existing,
-  signature_match_preference: :template,  # Use generated signatures
+  preference: :template,  # Use generated signatures
   add_template_only_nodes: true,          # Add new methods
 )
 result = merger.merge

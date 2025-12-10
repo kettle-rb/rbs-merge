@@ -18,7 +18,7 @@ module Rbs
     #   merger = SmartMerger.new(
     #     template_content,
     #     dest_content,
-    #     signature_match_preference: :template,
+    #     preference: :template,
     #     add_template_only_nodes: true
     #   )
     #   result = merger.merge
@@ -62,7 +62,7 @@ module Rbs
       #   - `nil` to indicate the node should have no signature
       #   - The original node to fall through to default signature computation
       #
-      # @param signature_match_preference [Symbol] Controls which version to use when nodes
+      # @param preference [Symbol] Controls which version to use when nodes
       #   have matching signatures but different content:
       #   - `:destination` (default) - Use destination version (preserves customizations)
       #   - `:template` - Use template version (applies updates)
@@ -84,12 +84,12 @@ module Rbs
         template_content,
         dest_content,
         signature_generator: nil,
-        signature_match_preference: :destination,
+        preference: :destination,
         add_template_only_nodes: false,
         freeze_token: FileAnalysis::DEFAULT_FREEZE_TOKEN,
         max_recursion_depth: Float::INFINITY
       )
-        @signature_match_preference = signature_match_preference
+        @preference = preference
         @add_template_only_nodes = add_template_only_nodes
         @max_recursion_depth = max_recursion_depth
 
@@ -117,7 +117,7 @@ module Rbs
 
         @aligner = FileAligner.new(@template_analysis, @dest_analysis)
         @resolver = ConflictResolver.new(
-          preference: @signature_match_preference,
+          preference: @preference,
           template_analysis: @template_analysis,
           dest_analysis: @dest_analysis,
         )
@@ -247,8 +247,8 @@ module Rbs
       # @return [String] Merged declaration source
       def reconstruct_declaration_with_merged_members(template_decl, dest_decl, template_index, dest_index)
         # Choose which declaration to use based on preference
-        decl = (@signature_match_preference == :template) ? template_decl : dest_decl
-        analysis = (@signature_match_preference == :template) ? @template_analysis : @dest_analysis
+        decl = (@preference == :template) ? template_decl : dest_decl
+        analysis = (@preference == :template) ? @template_analysis : @dest_analysis
 
         start_line = decl.location.start_line
         end_line = decl.location.end_line

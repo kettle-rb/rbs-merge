@@ -120,7 +120,7 @@ RSpec.describe Rbs::Merge::SmartMerger do
         RBS
       end
 
-      context "when signature_match_preference is :destination (default)" do
+      context "when preference is :destination (default)" do
         it "uses destination version" do
           merger = described_class.new(template, destination)
           result = merger.merge_result
@@ -129,9 +129,9 @@ RSpec.describe Rbs::Merge::SmartMerger do
         end
       end
 
-      context "when signature_match_preference is :template" do
+      context "when preference is :template" do
         it "uses template version" do
-          merger = described_class.new(template, destination, signature_match_preference: :template)
+          merger = described_class.new(template, destination, preference: :template)
           result = merger.merge_result
           expect(result.to_s).to include("(String) -> Integer")
           expect(result.to_s).not_to include("(Integer) -> String")
@@ -362,7 +362,7 @@ RSpec.describe Rbs::Merge::SmartMerger do
     let(:destination) { "type my_type = Integer\n" }
 
     it "uses template version when preference is :template" do
-      merger = described_class.new(template, destination, signature_match_preference: :template)
+      merger = described_class.new(template, destination, preference: :template)
       result = merger.merge_result
       expect(result.to_s).to include("type my_type = String")
       expect(result.to_s).not_to include("type my_type = Integer")
@@ -432,13 +432,13 @@ RSpec.describe Rbs::Merge::SmartMerger do
     end
 
     it "preserves comments when using template preference" do
-      merger = described_class.new(template, destination, signature_match_preference: :template)
+      merger = described_class.new(template, destination, preference: :template)
       result = merger.merge_result
       expect(result.to_s).to include("# Template comment")
     end
 
     it "preserves comments when using destination preference" do
-      merger = described_class.new(template, destination, signature_match_preference: :destination)
+      merger = described_class.new(template, destination, preference: :destination)
       result = merger.merge_result
       expect(result.to_s).to include("# Destination comment")
     end
@@ -468,8 +468,8 @@ RSpec.describe Rbs::Merge::SmartMerger do
       RBS
     end
 
-    it "uses template content when signature_match_preference is :template" do
-      merger = described_class.new(template, destination, signature_match_preference: :template)
+    it "uses template content when preference is :template" do
+      merger = described_class.new(template, destination, preference: :template)
       result = merger.merge_result
       expect(result.to_s).to include("type my_alias = String")
       expect(result.to_s).not_to include("Integer")
