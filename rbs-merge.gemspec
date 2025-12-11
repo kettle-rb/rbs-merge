@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.name = "rbs-merge"
   spec.version = gem_version
   spec.authors = ["Peter H. Boling"]
-  spec.email = ["peter.boling@gmail.com"]
+  spec.email = ["floss@galtzo.com"]
 
   spec.summary = "☯️ Smart merge for RBS type signature files using AST analysis"
   spec.description = "☯️ Intelligently merge RBS type signature files by parsing and comparing AST structures. Supports freeze blocks to protect customizations, signature-based matching, and configurable merge strategies."
