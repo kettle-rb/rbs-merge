@@ -123,6 +123,16 @@ module Rbs
         end
       end
 
+      # Override to detect RBS nodes for signature generator fallthrough
+      # @param value [Object] The value to check
+      # @return [Boolean] true if this is a fallthrough node
+      def fallthrough_node?(value)
+        value.is_a?(RBS::AST::Declarations::Base) ||
+          value.is_a?(RBS::AST::Members::Base) ||
+          value.is_a?(FreezeNode) ||
+          super
+      end
+
       private
 
       # Extract all nodes and integrate freeze blocks
