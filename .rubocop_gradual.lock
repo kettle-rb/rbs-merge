@@ -1,21 +1,21 @@
 {
-  "README.md:3679056995": [
-    [456, 10, 1, "Lint/Syntax: unexpected token tCOLON\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177567],
-    [456, 21, 2, "Lint/Syntax: unexpected token tLAMBDA\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 5858998],
-    [456, 24, 7, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 1691528419],
-    [464, 10, 1, "Lint/Syntax: unexpected token tCOLON\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177567],
-    [464, 22, 2, "Lint/Syntax: unexpected token tLAMBDA\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 5858998],
-    [464, 25, 6, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 3320113488],
-    [508, 12, 1, "Lint/Syntax: unexpected token tCOLON\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177567],
-    [508, 18, 1, "Lint/Syntax: unexpected token tLPAREN2\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177549],
-    [508, 41, 4, "Lint/Syntax: unexpected token tIDENTIFIER\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 2087944093],
-    [508, 50, 1, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177649],
-    [509, 20, 1, "Lint/Syntax: unexpected token tLPAREN2\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177549],
-    [509, 36, 4, "Lint/Syntax: unexpected token tIDENTIFIER\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 2087730517],
-    [509, 51, 13, "Lint/Syntax: unexpected token tIDENTIFIER\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 2651733601],
-    [509, 69, 1, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177648],
-    [512, 22, 6, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 3320113488],
-    [942, 1, 0, "Lint/Syntax: unexpected token $end\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 5381]
+  "README.md:921707246": [
+    [467, 10, 1, "Lint/Syntax: unexpected token tCOLON\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177567],
+    [467, 21, 2, "Lint/Syntax: unexpected token tLAMBDA\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 5858998],
+    [467, 24, 7, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 1691528419],
+    [475, 10, 1, "Lint/Syntax: unexpected token tCOLON\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177567],
+    [475, 22, 2, "Lint/Syntax: unexpected token tLAMBDA\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 5858998],
+    [475, 25, 6, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 3320113488],
+    [519, 12, 1, "Lint/Syntax: unexpected token tCOLON\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177567],
+    [519, 18, 1, "Lint/Syntax: unexpected token tLPAREN2\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177549],
+    [519, 41, 4, "Lint/Syntax: unexpected token tIDENTIFIER\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 2087944093],
+    [519, 50, 1, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177649],
+    [520, 20, 1, "Lint/Syntax: unexpected token tLPAREN2\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177549],
+    [520, 36, 4, "Lint/Syntax: unexpected token tIDENTIFIER\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 2087730517],
+    [520, 51, 13, "Lint/Syntax: unexpected token tIDENTIFIER\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 2651733601],
+    [520, 69, 1, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177648],
+    [523, 22, 6, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 3320113488],
+    [953, 1, 0, "Lint/Syntax: unexpected token $end\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 5381]
   ],
   "bin/bin/coverage_branches:2666843168": [
     [55, 15, 4, "Security/Eval: The use of `eval` is a serious security risk.", 2087429787],
