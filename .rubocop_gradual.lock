@@ -1,5 +1,5 @@
 {
-  "README.md:921707246": [
+  "README.md:1220819386": [
     [467, 10, 1, "Lint/Syntax: unexpected token tCOLON\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177567],
     [467, 21, 2, "Lint/Syntax: unexpected token tLAMBDA\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 5858998],
     [467, 24, 7, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 1691528419],
@@ -15,7 +15,7 @@
     [520, 51, 13, "Lint/Syntax: unexpected token tIDENTIFIER\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 2651733601],
     [520, 69, 1, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177648],
     [523, 22, 6, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 3320113488],
-    [953, 1, 0, "Lint/Syntax: unexpected token $end\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 5381]
+    [937, 1, 0, "Lint/Syntax: unexpected token $end\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 5381]
   ],
   "bin/bin/coverage_branches:2666843168": [
     [55, 15, 4, "Security/Eval: The use of `eval` is a serious security risk.", 2087429787],
