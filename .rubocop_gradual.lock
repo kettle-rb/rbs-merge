@@ -30,9 +30,6 @@
     [55, 15, 4, "Security/Eval: The use of `eval` is a serious security risk.", 2087429787],
     [60, 15, 4, "Security/Eval: The use of `eval` is a serious security risk.", 2087429787]
   ],
-  "spec/integration/reproducible_merge_spec.rb:4074903150": [
-    [6, 16, 24, "RSpec/DescribeClass: The first argument to describe should be the class or module being tested.", 3039333908]
-  ],
   "spec/rbs/version_spec.rb:2235363496": [
     [3, 1, 34, "RSpec/SpecFilePathFormat: Spec path should end with `rbs/merge/version*_spec.rb`.", 178741136]
   ]
