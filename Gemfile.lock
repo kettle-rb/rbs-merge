@@ -15,7 +15,7 @@ PATH
   specs:
     rbs-merge (1.0.0)
       ast-merge (~> 1.0)
-      rbs (>= 3.0)
+      rbs (>= 1.6)
       version_gem (~> 1.1, >= 1.1.9)
 
 GEM
@@ -334,6 +334,7 @@ DEPENDENCIES
   kramdown-parser-gfm (~> 1.1)
   mutex_m (~> 0.2)
   rake (~> 13.0)
+  rbs (< 1.7)
   rbs-merge!
   rdoc (~> 6.11)
   reek (~> 6.5)

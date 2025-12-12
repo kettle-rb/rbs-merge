@@ -8,6 +8,8 @@ git_source(:gitlab) { |repo_name| "https://gitlab.com/#{repo_name}" }
 # Specify your gem's dependencies in psych-merge.gemspec
 gemspec
 
+eval_gemfile "gemfiles/modular/jruby.gemfile"
+
 eval_gemfile "gemfiles/modular/debug.gemfile"
 eval_gemfile "gemfiles/modular/coverage.gemfile"
 eval_gemfile "gemfiles/modular/style.gemfile"

@@ -2,6 +2,10 @@
 
 source "https://gem.coop"
 
+platforms "jruby" do
+  gem "rbs", "< 1.7"
+end
+
 gemspec path: "../"
 
 eval_gemfile("modular/coverage.gemfile")

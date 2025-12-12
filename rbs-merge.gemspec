@@ -82,7 +82,7 @@ Gem::Specification.new do |spec|
   spec.executables = []
 
   # Parser and AST infrastructure
-  spec.add_dependency("rbs", ">= 3.0")                                  # ruby >= 2.6.0
+  spec.add_dependency("rbs", ">= 1.6")                                  # ruby >= 2.6.0
 
   # Shared merge infrastructure
   spec.add_dependency("ast-merge", "~> 1.0")                            # ruby >= 3.2.0

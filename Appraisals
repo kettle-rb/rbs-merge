@@ -36,15 +36,39 @@ appraise "head" do
   eval_gemfile "modular/x_std_libs.gemfile"
 end
 
+appraise "head-jruby" do
+  platforms :jruby do
+    # Why is gem "cgi" here? See: https://github.com/vcr/vcr/issues/1057
+    #  gem "cgi", ">= 0.5"
+    gem "benchmark", "~> 0.4", ">= 0.4.1"
+    eval_gemfile "modular/jruby.gemfile"
+    eval_gemfile "modular/x_std_libs.gemfile"
+  end
+end
+
 # Used for current releases of ruby, truffleruby, and jruby.
 # Split into discrete appraisals if one of them needs a dependency locked discretely.
 appraise "current" do
   eval_gemfile "modular/x_std_libs.gemfile"
 end
 
+appraise "current-jruby" do
+  platforms :jruby do
+    eval_gemfile "modular/jruby.gemfile"
+    eval_gemfile "modular/x_std_libs.gemfile"
+  end
+end
+
 # Test current Rubies against head versions of runtime dependencies
 appraise "dep-heads" do
   eval_gemfile "modular/runtime_heads.gemfile"
+end
+
+appraise "dep-heads-jruby" do
+  platforms :jruby do
+    eval_gemfile "modular/jruby.gemfile"
+    eval_gemfile "modular/runtime_heads.gemfile"
+  end
 end
 
 appraise "ruby-3-2" do
