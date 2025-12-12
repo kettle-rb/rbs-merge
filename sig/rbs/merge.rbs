@@ -185,7 +185,7 @@ module Rbs
         ?add_template_only_nodes: bool,
         ?freeze_token: String,
         ?max_recursion_depth: Integer | Float,
-        ?node_splitter: (Hash[Symbol, untyped])?
+        ?node_splitter: Hash[Symbol, untyped]?
       ) -> void
 
       def merge: () -> MergeResult
