@@ -8,3 +8,13 @@ source "https://gem.coop"
 # We do not load the standard Gemfile, as it is tailored for local development.
 
 gemspec
+
+# rbs has to be restricted in the root appraisal in order for the jruby appraisal bundles to install on jruby at all.
+# Note: We can't reuse the modular gemfile for jruby here because anything in this gile gets added to all appraisals,
+#       and the paths do not align.
+platform "jruby" do
+  # JRuby does not yet support RBS 1.7+, which was refactored to use a C extension to replace the native Ruby racc
+  # https://github.com/ruby/rbs/issues/2067
+  # https://github.com/ruby/rbs/pull/788
+  gem "rbs", "< 1.7"
+end
