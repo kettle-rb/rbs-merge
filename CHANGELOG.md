@@ -20,8 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Initial release
-
 ### Changed
 
 ### Deprecated
@@ -31,6 +29,17 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [1.0.0] - 2025-12-12
+
+- TAG: [v1.0.0][1.0.0t]
+- COVERAGE: 98.56% -- 343/348 lines in 9 files
+- BRANCH COVERAGE: 87.50% -- 98/112 branches in 9 files
+- 96.61% documented
+
+### Added
+
+- Initial release
 
 [Unreleased]: https://github.com/kettle-rb/rbs-merge/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/kettle-rb/rbs-merge/compare/7ae936a6ae844aee513264eecc39215eed53c313...v1.0.0
