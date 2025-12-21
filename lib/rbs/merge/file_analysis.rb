@@ -41,12 +41,14 @@ module Rbs
       # @param source [String] RBS source code to analyze
       # @param freeze_token [String] Token for freeze block markers (default: "rbs-merge")
       # @param signature_generator [Proc, nil] Custom signature generator
+      # @param options [Hash] Additional options (forward compatibility - ignored by FileAnalysis)
       # @raise [RBS::ParsingError] If the source has syntax errors
-      def initialize(source, freeze_token: DEFAULT_FREEZE_TOKEN, signature_generator: nil)
+      def initialize(source, freeze_token: DEFAULT_FREEZE_TOKEN, signature_generator: nil, **options)
         @source = source
         @lines = source.split("\n", -1)
         @freeze_token = freeze_token
         @signature_generator = signature_generator
+        # **options captures any additional parameters (e.g., node_typing) for forward compatibility
 
         # Parse the RBS source
         @buffer = RBS::Buffer.new(name: "merge.rbs", content: source)

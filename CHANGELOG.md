@@ -20,7 +20,19 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `node_typing` parameter for per-node-type merge preferences
+  - Enables `preference: { default: :destination, special_type: :template }` pattern
+  - Works with custom merge_types assigned via node_typing lambdas
+- `match_refiner` parameter for fuzzy matching support
+- `regions` and `region_placeholder` parameters for nested content merging
+
 ### Changed
+
+- **BREAKING**: `SmartMerger` now inherits from `Ast::Merge::SmartMergerBase`
+  - Provides standardized options API consistent with all other `*-merge` gems
+  - Gains automatic support for new SmartMergerBase features
+  - `max_recursion_depth` parameter is still supported
+  - `preference` now accepts Hash for per-type preferences
 
 ### Deprecated
 

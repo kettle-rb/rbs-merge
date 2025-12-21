@@ -31,26 +31,16 @@ module Rbs
     #     signature_generator: sig_gen
     #   )
     #
+    # @example With node_typing for per-node-type preferences
+    #   merger = SmartMerger.new(template, dest,
+    #     node_typing: { "ClassDecl" => ->(n) { NodeTyping.with_merge_type(n, :model) } },
+    #     preference: { default: :destination, model: :template })
+    #
     # @see FileAnalysis
     # @see FileAligner
     # @see ConflictResolver
     # @see MergeResult
-    class SmartMerger
-      # @return [FileAnalysis] Analysis of the template file
-      attr_reader :template_analysis
-
-      # @return [FileAnalysis] Analysis of the destination file
-      attr_reader :dest_analysis
-
-      # @return [FileAligner] Aligner for finding matches and differences
-      attr_reader :aligner
-
-      # @return [ConflictResolver] Resolver for handling conflicting content
-      attr_reader :resolver
-
-      # @return [MergeResult] Result object tracking merged content
-      attr_reader :result
-
+    class SmartMerger < ::Ast::Merge::SmartMergerBase
       # Creates a new SmartMerger for intelligent RBS file merging.
       #
       # @param template_content [String] Template RBS source code
@@ -62,10 +52,11 @@ module Rbs
       #   - `nil` to indicate the node should have no signature
       #   - The original node to fall through to default signature computation
       #
-      # @param preference [Symbol] Controls which version to use when nodes
+      # @param preference [Symbol, Hash] Controls which version to use when nodes
       #   have matching signatures but different content:
       #   - `:destination` (default) - Use destination version (preserves customizations)
       #   - `:template` - Use template version (applies updates)
+      #   - Hash for per-type preferences
       #
       # @param add_template_only_nodes [Boolean] Controls whether to add nodes that only
       #   exist in template:
@@ -74,6 +65,11 @@ module Rbs
       #
       # @param freeze_token [String] Token to use for freeze block markers.
       #   Default: "rbs-merge" (looks for # rbs-merge:freeze / # rbs-merge:unfreeze)
+      #
+      # @param match_refiner [#call, nil] Match refiner for fuzzy matching
+      # @param regions [Array<Hash>, nil] Region configurations for nested merging
+      # @param region_placeholder [String, nil] Custom placeholder for regions
+      # @param node_typing [Hash{Symbol,String => #call}, nil] Node typing configuration
       #
       # @param max_recursion_depth [Integer, Float] Maximum depth for recursive body merging.
       #   Default: Float::INFINITY (no limit)
@@ -86,70 +82,99 @@ module Rbs
         signature_generator: nil,
         preference: :destination,
         add_template_only_nodes: false,
-        freeze_token: FileAnalysis::DEFAULT_FREEZE_TOKEN,
+        freeze_token: nil,
+        match_refiner: nil,
+        regions: nil,
+        region_placeholder: nil,
+        node_typing: nil,
         max_recursion_depth: Float::INFINITY
       )
-        @preference = preference
-        @add_template_only_nodes = add_template_only_nodes
         @max_recursion_depth = max_recursion_depth
+        super(
+          template_content,
+          dest_content,
+          signature_generator: signature_generator,
+          preference: preference,
+          add_template_only_nodes: add_template_only_nodes,
+          freeze_token: freeze_token,
+          match_refiner: match_refiner,
+          regions: regions,
+          region_placeholder: region_placeholder,
+          node_typing: node_typing,
+        )
+      end
 
-        # Parse template
-        begin
-          @template_analysis = FileAnalysis.new(
-            template_content,
-            freeze_token: freeze_token,
-            signature_generator: signature_generator,
-          )
-        rescue RBS::ParsingError => e
-          raise TemplateParseError.new([e])
-        end
+      protected
 
-        # Parse destination
-        begin
-          @dest_analysis = FileAnalysis.new(
-            dest_content,
-            freeze_token: freeze_token,
-            signature_generator: signature_generator,
-          )
-        rescue RBS::ParsingError => e
-          raise DestinationParseError.new([e])
-        end
+      # @return [Class] The analysis class for RBS files
+      def analysis_class
+        FileAnalysis
+      end
 
-        @aligner = FileAligner.new(@template_analysis, @dest_analysis)
-        @resolver = ConflictResolver.new(
+      # @return [String] The default freeze token
+      def default_freeze_token
+        "rbs-merge"
+      end
+
+      # @return [Class, nil] The resolver class for RBS files
+      def resolver_class
+        ConflictResolver
+      end
+
+      # @return [Class, nil] Result class (built with analysis args)
+      def result_class
+        nil
+      end
+
+      # @return [Class] The aligner class for RBS files
+      def aligner_class
+        FileAligner
+      end
+
+      # @return [Class] The template parse error class for RBS
+      def template_parse_error_class
+        TemplateParseError
+      end
+
+      # @return [Class] The destination parse error class for RBS
+      def destination_parse_error_class
+        DestinationParseError
+      end
+
+      # Build the result with required analysis arguments
+      def build_result
+        MergeResult.new(@template_analysis, @dest_analysis)
+      end
+
+      # Build the resolver with RBS-specific options
+      def build_resolver
+        ConflictResolver.new(
           preference: @preference,
           template_analysis: @template_analysis,
           dest_analysis: @dest_analysis,
         )
-        @result = MergeResult.new(@template_analysis, @dest_analysis)
       end
 
-      # Perform the merge operation
-      #
-      # @return [String] The merged content as a string
-      def merge
-        merge_result.to_s
+      # Build the aligner
+      def build_aligner
+        FileAligner.new(@template_analysis, @dest_analysis)
       end
 
-      # Perform the merge operation and return the full result object
+      # Perform the RBS-specific merge with recursive body merging
       #
-      # @return [MergeResult] The merge result containing merged content
-      def merge_result
-        return @merge_result if @merge_result
+      # @return [MergeResult] The merge result
+      def perform_merge
+        alignment = @aligner.align
 
-        @merge_result = DebugLogger.time("SmartMerger#merge") do
-          alignment = @aligner.align
+        DebugLogger.debug("Alignment complete", {
+          total_entries: alignment.size,
+          matches: alignment.count { |e| e[:type] == :match },
+          template_only: alignment.count { |e| e[:type] == :template_only },
+          dest_only: alignment.count { |e| e[:type] == :dest_only },
+        })
 
-          DebugLogger.debug("Alignment complete", {
-            total_entries: alignment.size,
-            matches: alignment.count { |e| e[:type] == :match },
-            template_only: alignment.count { |e| e[:type] == :template_only },
-            dest_only: alignment.count { |e| e[:type] == :dest_only },
-          })
-
-          process_alignment(alignment)
-          @result
-        end
+        process_alignment(alignment)
+        @result
       end
 
       private
@@ -247,8 +272,9 @@ module Rbs
       # @return [String] Merged declaration source
       def reconstruct_declaration_with_merged_members(template_decl, dest_decl, template_index, dest_index)
         # Choose which declaration to use based on preference
-        decl = (@preference == :template) ? template_decl : dest_decl
-        analysis = (@preference == :template) ? @template_analysis : @dest_analysis
+        pref = @preference.is_a?(Hash) ? (@preference[:default] || :destination) : @preference
+        decl = (pref == :template) ? template_decl : dest_decl
+        analysis = (pref == :template) ? @template_analysis : @dest_analysis
 
         start_line = decl.location.start_line
         end_line = decl.location.end_line
