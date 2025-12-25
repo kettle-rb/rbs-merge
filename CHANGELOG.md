@@ -28,6 +28,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- **SmartMerger**: Added `**options` for forward compatibility
+  - Accepts additional options that may be added to base class in future
+  - Passes all options through to `SmartMergerBase`
+- **ConflictResolver**: Added `**options` for forward compatibility
+- **MergeResult**: Added `**options` for forward compatibility
 - **BREAKING**: `SmartMerger` now inherits from `Ast::Merge::SmartMergerBase`
   - Provides standardized options API consistent with all other `*-merge` gems
   - Gains automatic support for new SmartMergerBase features

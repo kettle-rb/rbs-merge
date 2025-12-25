@@ -87,7 +87,8 @@ module Rbs
         regions: nil,
         region_placeholder: nil,
         node_typing: nil,
-        max_recursion_depth: Float::INFINITY
+        max_recursion_depth: Float::INFINITY,
+        **options
       )
         @max_recursion_depth = max_recursion_depth
         super(
@@ -101,6 +102,7 @@ module Rbs
           regions: regions,
           region_placeholder: region_placeholder,
           node_typing: node_typing,
+          **options
         )
       end
 

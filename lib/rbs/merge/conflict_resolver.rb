@@ -19,12 +19,14 @@ module Rbs
       # @param preference [Symbol] Which version wins on conflict (:template or :destination)
       # @param template_analysis [FileAnalysis] Analysis of the template file
       # @param dest_analysis [FileAnalysis] Analysis of the destination file
-      def initialize(preference:, template_analysis:, dest_analysis:)
+      # @param options [Hash] Additional options for forward compatibility
+      def initialize(preference:, template_analysis:, dest_analysis:, **options)
         super(
           strategy: :node,
           preference: preference,
           template_analysis: template_analysis,
-          dest_analysis: dest_analysis
+          dest_analysis: dest_analysis,
+          **options
         )
       end
 
