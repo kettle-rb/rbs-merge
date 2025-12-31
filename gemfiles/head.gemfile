@@ -2,8 +2,6 @@
 
 source "https://gem.coop"
 
-gem "benchmark", "~> 0.4", ">= 0.4.1"
-
 platforms "jruby" do
   gem "rbs", "< 1.7"
 end
