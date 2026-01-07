@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
-RSpec.describe Rbs::Merge::FileAligner do
+# FileAligner specs - works with any RBS parser backend
+# Tagged with :rbs_parsing since FileAnalysis supports both RBS gem and tree-sitter-rbs
+RSpec.describe Rbs::Merge::FileAligner, :rbs_parsing do
   describe "#initialize" do
     let(:template_source) { "class Foo\nend" }
     let(:dest_source) { "class Bar\nend" }

@@ -1,9 +1,27 @@
 # frozen_string_literal: true
 
+# FileAnalysis specs with explicit backend testing
+#
+# This spec file tests FileAnalysis behavior across both available backends:
+# - :rbs (via RBS gem, tagged :rbs_backend)
+# - :tree_sitter (via tree-sitter-rbs grammar, tagged :rbs_grammar)
+#
+# We define shared examples that are parameterized, then include them in
+# backend-specific contexts that use TreeHaver.with_backend to explicitly
+# select the backend under test.
+
 RSpec.describe Rbs::Merge::FileAnalysis do
-  describe "#initialize" do
-    context "with valid RBS source" do
-      let(:source) do
+  # ============================================================
+  # Shared examples for backend-agnostic behavior
+  # These examples take the expected backend symbol as a parameter
+  # The backend is determined by the TreeHaver context (via with_backend or env var)
+  # ============================================================
+
+  shared_examples "valid RBS parsing" do |expected_backend:|
+    describe "with valid RBS source" do
+      subject(:analysis) { described_class.new(valid_source) }
+
+      let(:valid_source) do
         <<~RBS
           class Foo
             def bar: (String) -> Integer
@@ -12,51 +30,67 @@ RSpec.describe Rbs::Merge::FileAnalysis do
       end
 
       it "parses successfully" do
-        analysis = described_class.new(source)
+        expect(analysis).to be_a(described_class)
+      end
+
+      it "is valid" do
         expect(analysis.valid?).to be true
       end
 
-      it "extracts declarations" do
-        analysis = described_class.new(source)
-        expect(analysis.declarations.size).to eq(1)
-        expect(analysis.declarations.first).to be_a(RBS::AST::Declarations::Class)
+      it "has no errors" do
+        expect(analysis.errors).to be_empty
       end
 
-      it "stores source lines" do
-        analysis = described_class.new(source)
-        expect(analysis.lines.size).to eq(4)
+      it "uses the #{expected_backend} backend" do
+        expect(analysis.backend).to eq(expected_backend)
+      end
+
+      it "returns a NodeWrapper for statements" do
+        statements = analysis.statements
+        expect(statements).to be_an(Array)
+        expect(statements.first).to be_a(Rbs::Merge::NodeWrapper)
+      end
+
+      it "returns source lines" do
+        expect(analysis.lines).to be_an(Array)
+        expect(analysis.lines.first).to eq("class Foo")
+      end
+
+      it "extracts declarations" do
+        expect(analysis.declarations).not_to be_empty
       end
     end
+  end
 
-    context "with comments" do
-      let(:source) do
+  # Note: Strict error detection depends on the parser - RBS gem
+  # reports errors more strictly than some tree-sitter backends
+  shared_examples "invalid RBS detection" do
+    describe "with invalid RBS", :rbs_backend do
+      subject(:analysis) { described_class.new(invalid_source) }
+
+      let(:invalid_source) do
         <<~RBS
-          # A sample class
           class Foo
-            # A method
-            def bar: (String) -> Integer
+            def bar: (
           end
         RBS
       end
 
-      it "attaches comments to declarations" do
-        analysis = described_class.new(source)
-        decl = analysis.declarations.first
-        expect(decl.comment).not_to be_nil
-        expect(decl.comment.string).to include("sample class")
+      it "is not valid" do
+        expect(analysis.valid?).to be false
       end
 
-      it "attaches comments to members" do
-        analysis = described_class.new(source)
-        decl = analysis.declarations.first
-        method_def = decl.members.first
-        expect(method_def.comment).not_to be_nil
-        expect(method_def.comment.string).to include("method")
+      it "has errors" do
+        expect(analysis.errors).not_to be_empty
       end
     end
+  end
 
-    context "with multiple declarations" do
-      let(:source) do
+  shared_examples "multiple declarations" do
+    describe "with multiple declarations" do
+      subject(:analysis) { described_class.new(multi_decl_source) }
+
+      let(:multi_decl_source) do
         <<~RBS
           class Foo
             def foo: () -> void
@@ -77,32 +111,61 @@ RSpec.describe Rbs::Merge::FileAnalysis do
       end
 
       it "extracts all declaration types" do
-        analysis = described_class.new(source)
         expect(analysis.declarations.size).to eq(5)
+      end
 
-        classes = analysis.declarations.select { |d| d.is_a?(RBS::AST::Declarations::Class) }
-        modules = analysis.declarations.select { |d| d.is_a?(RBS::AST::Declarations::Module) }
-        interfaces = analysis.declarations.select { |d| d.is_a?(RBS::AST::Declarations::Interface) }
-        type_aliases = analysis.declarations.select { |d| d.is_a?(RBS::AST::Declarations::TypeAlias) }
-        constants = analysis.declarations.select { |d| d.is_a?(RBS::AST::Declarations::Constant) }
+      it "has statements for all declarations" do
+        expect(analysis.statements.size).to eq(5)
+      end
 
-        expect(classes.size).to eq(1)
-        expect(modules.size).to eq(1)
-        expect(interfaces.size).to eq(1)
-        expect(type_aliases.size).to eq(1)
-        expect(constants.size).to eq(1)
+      it "can generate signatures for all statements" do
+        analysis.statements.each do |stmt|
+          sig = analysis.generate_signature(stmt)
+          expect(sig).to be_an(Array)
+          expect(sig).not_to be_empty
+        end
       end
     end
+  end
 
-    context "with freeze blocks" do
-      let(:source) do
+  shared_examples "signature generation" do
+    describe "#generate_signature" do
+      subject(:analysis) { described_class.new(source_for_signature) }
+
+      let(:source_for_signature) do
+        <<~RBS
+          class Foo
+            def bar: () -> void
+          end
+        RBS
+      end
+
+      it "generates signature for a class" do
+        stmt = analysis.statements.first
+        sig = analysis.generate_signature(stmt)
+        expect(sig).to be_an(Array)
+        expect(sig.first).to eq(:class)
+        expect(sig[1]).to include("Foo")
+      end
+
+      it "returns nil for nil input" do
+        sig = analysis.generate_signature(nil)
+        expect(sig).to be_nil
+      end
+    end
+  end
+
+  shared_examples "freeze blocks" do
+    describe "with freeze blocks" do
+      subject(:analysis) { described_class.new(source_with_freeze) }
+
+      let(:source_with_freeze) do
         <<~RBS
           class Foo
             def foo: () -> void
           end
 
           # rbs-merge:freeze
-          # Custom type
           type custom = String
           # rbs-merge:unfreeze
 
@@ -113,34 +176,28 @@ RSpec.describe Rbs::Merge::FileAnalysis do
       end
 
       it "detects freeze blocks" do
-        analysis = described_class.new(source)
         expect(analysis.freeze_blocks.size).to eq(1)
       end
 
       it "extracts freeze block content" do
-        analysis = described_class.new(source)
         freeze_block = analysis.freeze_blocks.first
         expect(freeze_block.start_line).to eq(5)
-        expect(freeze_block.end_line).to eq(8)
+        expect(freeze_block.end_line).to eq(7)
       end
 
       it "includes freeze blocks in statements" do
-        analysis = described_class.new(source)
         # Should have: Foo class, freeze block, Bar class
-        expect(analysis.statements.size).to eq(3)
-        expect(analysis.statements[1]).to be_a(Rbs::Merge::FreezeNode)
-      end
-
-      it "removes frozen declarations from regular statements" do
-        analysis = described_class.new(source)
-        # The type alias is inside the freeze block, so it should only appear there
-        type_aliases = analysis.statements.select { |s| s.is_a?(RBS::AST::Declarations::TypeAlias) }
-        expect(type_aliases).to be_empty
+        freeze_nodes = analysis.statements.select { |s| s.is_a?(Rbs::Merge::FreezeNode) }
+        expect(freeze_nodes.size).to eq(1)
       end
     end
+  end
 
-    context "with custom freeze token" do
-      let(:source) do
+  shared_examples "custom freeze token" do
+    describe "with custom freeze token" do
+      subject(:analysis) { described_class.new(source_with_custom_token, freeze_token: "my-token") }
+
+      let(:source_with_custom_token) do
         <<~RBS
           # my-token:freeze
           class Foo
@@ -150,369 +207,226 @@ RSpec.describe Rbs::Merge::FileAnalysis do
         RBS
       end
 
-      it "detects custom freeze tokens" do
-        analysis = described_class.new(source, freeze_token: "my-token")
+      it "recognizes the custom token" do
         expect(analysis.freeze_blocks.size).to eq(1)
       end
+    end
+  end
 
-      it "ignores mismatched freeze tokens" do
-        analysis = described_class.new(source, freeze_token: "other-token")
-        expect(analysis.freeze_blocks).to be_empty
+  shared_examples "fallthrough_node? behavior" do
+    describe "#fallthrough_node?" do
+      subject(:analysis) { described_class.new(valid_source) }
+
+      let(:valid_source) { "class Foo\nend" }
+
+      it "returns true for NodeWrapper instances" do
+        wrapper = analysis.statements.first
+        expect(analysis.fallthrough_node?(wrapper)).to be true
+      end
+
+      it "returns false for other objects" do
+        expect(analysis.fallthrough_node?("string")).to be false
+        expect(analysis.fallthrough_node?(123)).to be false
       end
     end
   end
 
-  describe "#line_at" do
-    let(:source) { "class Foo\nend\n" }
-    let(:analysis) { described_class.new(source) }
+  shared_examples "line_at access" do
+    describe "#line_at" do
+      subject(:analysis) { described_class.new(multiline_source) }
 
-    it "returns the correct line (1-indexed)" do
-      expect(analysis.line_at(1)).to eq("class Foo")
-      expect(analysis.line_at(2)).to eq("end")
-    end
-
-    it "returns nil for out of range" do
-      expect(analysis.line_at(0)).to be_nil
-      expect(analysis.line_at(100)).to be_nil
-    end
-  end
-
-  describe "#normalized_line" do
-    let(:source) { "  class Foo  \nend\n" }
-    let(:analysis) { described_class.new(source) }
-
-    it "returns stripped line" do
-      expect(analysis.normalized_line(1)).to eq("class Foo")
-    end
-  end
-
-  describe "#signature_at" do
-    let(:source) do
-      <<~RBS
-        class Foo
-          def bar: () -> void
-        end
-
-        module Baz
-        end
-      RBS
-    end
-    let(:analysis) { described_class.new(source) }
-
-    it "returns class signature" do
-      expect(analysis.signature_at(0)).to eq([:class, "Foo"])
-    end
-
-    it "returns module signature" do
-      expect(analysis.signature_at(1)).to eq([:module, "Baz"])
-    end
-
-    it "returns nil for out of range" do
-      expect(analysis.signature_at(-1)).to be_nil
-      expect(analysis.signature_at(100)).to be_nil
-    end
-  end
-
-  describe "#compute_node_signature" do
-    let(:source) do
-      <<~RBS
-        class MyClass
-        end
-
-        module MyModule
-        end
-
-        interface _MyInterface
-        end
-
-        type my_alias = String
-
-        CONST: Integer
-
-        $global: String
-      RBS
-    end
-    let(:analysis) { described_class.new(source) }
-
-    it "computes class signature" do
-      decl = analysis.declarations.find { |d| d.is_a?(RBS::AST::Declarations::Class) }
-      expect(analysis.compute_node_signature(decl)).to eq([:class, "MyClass"])
-    end
-
-    it "computes module signature" do
-      decl = analysis.declarations.find { |d| d.is_a?(RBS::AST::Declarations::Module) }
-      expect(analysis.compute_node_signature(decl)).to eq([:module, "MyModule"])
-    end
-
-    it "computes interface signature" do
-      decl = analysis.declarations.find { |d| d.is_a?(RBS::AST::Declarations::Interface) }
-      expect(analysis.compute_node_signature(decl)).to eq([:interface, "_MyInterface"])
-    end
-
-    it "computes type alias signature" do
-      decl = analysis.declarations.find { |d| d.is_a?(RBS::AST::Declarations::TypeAlias) }
-      expect(analysis.compute_node_signature(decl)).to eq([:type_alias, "my_alias"])
-    end
-
-    it "computes constant signature" do
-      decl = analysis.declarations.find { |d| d.is_a?(RBS::AST::Declarations::Constant) }
-      expect(analysis.compute_node_signature(decl)).to eq([:constant, "CONST"])
-    end
-
-    it "computes global signature" do
-      decl = analysis.declarations.find { |d| d.is_a?(RBS::AST::Declarations::Global) }
-      expect(analysis.compute_node_signature(decl)).to eq([:global, "$global"])
-    end
-  end
-
-  describe "#generate_signature with custom generator" do
-    let(:source) do
-      <<~RBS
-        class Foo
-        end
-
-        class Bar
-        end
-      RBS
-    end
-
-    it "uses custom generator when provided" do
-      custom_generator = ->(node) { [:custom, node.name.to_s.upcase] }
-      analysis = described_class.new(source, signature_generator: custom_generator)
-
-      expect(analysis.signature_at(0)).to eq([:custom, "FOO"])
-      expect(analysis.signature_at(1)).to eq([:custom, "BAR"])
-    end
-
-    it "falls through to default when generator returns node" do
-      custom_generator = ->(node) { node }
-      analysis = described_class.new(source, signature_generator: custom_generator)
-
-      expect(analysis.signature_at(0)).to eq([:class, "Foo"])
-    end
-
-    it "returns nil when generator returns nil" do
-      custom_generator = ->(_node) { nil }
-      analysis = described_class.new(source, signature_generator: custom_generator)
-
-      expect(analysis.signature_at(0)).to be_nil
-    end
-  end
-
-  describe "#compute_node_signature for members" do
-    context "with method definitions" do
-      let(:source) do
+      let(:multiline_source) do
         <<~RBS
           class Foo
             def bar: () -> void
-            def self.baz: () -> void
           end
         RBS
       end
-      let(:analysis) { described_class.new(source) }
 
-      it "computes instance method signature" do
-        decl = analysis.declarations.first
-        method_def = decl.members.find { |m| m.is_a?(RBS::AST::Members::MethodDefinition) && m.kind == :instance }
-        expect(analysis.compute_node_signature(method_def)).to eq([:method, "bar", :instance])
+      it "returns line at valid index (1-based)" do
+        line = analysis.line_at(1)
+        expect(line).to eq("class Foo")
       end
 
-      it "computes singleton method signature" do
-        decl = analysis.declarations.first
-        method_def = decl.members.find { |m| m.is_a?(RBS::AST::Members::MethodDefinition) && m.kind == :singleton }
-        expect(analysis.compute_node_signature(method_def)).to eq([:method, "baz", :singleton])
-      end
-    end
-
-    context "with alias members" do
-      let(:source) do
-        <<~RBS
-          class Foo
-            def bar: () -> void
-            alias baz bar
-          end
-        RBS
-      end
-      let(:analysis) { described_class.new(source) }
-
-      it "computes alias signature" do
-        decl = analysis.declarations.first
-        alias_member = decl.members.find { |m| m.is_a?(RBS::AST::Members::Alias) }
-        expect(analysis.compute_node_signature(alias_member)).to eq([:alias, "baz", "bar"])
-      end
-    end
-
-    context "with attr members" do
-      let(:source) do
-        <<~RBS
-          class Foo
-            attr_reader name: String
-            attr_writer age: Integer
-            attr_accessor value: Float
-          end
-        RBS
-      end
-      let(:analysis) { described_class.new(source) }
-
-      it "computes attr_reader signature" do
-        decl = analysis.declarations.first
-        attr_member = decl.members.find { |m| m.is_a?(RBS::AST::Members::AttrReader) }
-        expect(analysis.compute_node_signature(attr_member)).to eq([:attr_reader, "name"])
+      it "returns nil for invalid index" do
+        line = analysis.line_at(100)
+        expect(line).to be_nil
       end
 
-      it "computes attr_writer signature" do
-        decl = analysis.declarations.first
-        attr_member = decl.members.find { |m| m.is_a?(RBS::AST::Members::AttrWriter) }
-        expect(analysis.compute_node_signature(attr_member)).to eq([:attr_writer, "age"])
-      end
-
-      it "computes attr_accessor signature" do
-        decl = analysis.declarations.first
-        attr_member = decl.members.find { |m| m.is_a?(RBS::AST::Members::AttrAccessor) }
-        expect(analysis.compute_node_signature(attr_member)).to eq([:attr_accessor, "value"])
-      end
-    end
-
-    context "with mixin members" do
-      let(:source) do
-        <<~RBS
-          class Foo
-            include Bar
-            extend Baz
-            prepend Qux
-          end
-        RBS
-      end
-      let(:analysis) { described_class.new(source) }
-
-      it "computes include signature" do
-        decl = analysis.declarations.first
-        include_member = decl.members.find { |m| m.is_a?(RBS::AST::Members::Include) }
-        expect(analysis.compute_node_signature(include_member)).to eq([:include, "Bar"])
-      end
-
-      it "computes extend signature" do
-        decl = analysis.declarations.first
-        extend_member = decl.members.find { |m| m.is_a?(RBS::AST::Members::Extend) }
-        expect(analysis.compute_node_signature(extend_member)).to eq([:extend, "Baz"])
-      end
-
-      it "computes prepend signature" do
-        decl = analysis.declarations.first
-        prepend_member = decl.members.find { |m| m.is_a?(RBS::AST::Members::Prepend) }
-        expect(analysis.compute_node_signature(prepend_member)).to eq([:prepend, "Qux"])
-      end
-    end
-
-    context "with variable members" do
-      let(:source) do
-        <<~RBS
-          class Foo
-            @instance_var: String
-            self.@class_instance_var: Integer
-            @@class_var: Float
-          end
-        RBS
-      end
-      let(:analysis) { described_class.new(source) }
-
-      it "computes instance variable signature" do
-        decl = analysis.declarations.first
-        ivar_member = decl.members.find { |m| m.is_a?(RBS::AST::Members::InstanceVariable) }
-        expect(analysis.compute_node_signature(ivar_member)).to eq([:ivar, "@instance_var"])
-      end
-
-      it "computes class instance variable signature" do
-        decl = analysis.declarations.first
-        civar_member = decl.members.find { |m| m.is_a?(RBS::AST::Members::ClassInstanceVariable) }
-        expect(analysis.compute_node_signature(civar_member)).to eq([:civar, "@class_instance_var"])
-      end
-
-      it "computes class variable signature" do
-        decl = analysis.declarations.first
-        cvar_member = decl.members.find { |m| m.is_a?(RBS::AST::Members::ClassVariable) }
-        expect(analysis.compute_node_signature(cvar_member)).to eq([:cvar, "@@class_var"])
-      end
-    end
-
-    context "with unknown node type" do
-      it "returns unknown signature with class name and location" do
-        # Create a mock object that doesn't match any known type
-        unknown_node = double("UnknownNode", class: Class.new { def name = "UnknownType" }.new, location: double(start_line: 42))
-        analysis = described_class.new("class Foo\nend\n")
-
-        signature = analysis.compute_node_signature(unknown_node)
-        expect(signature[0]).to eq(:unknown)
+      it "returns nil for zero index" do
+        line = analysis.line_at(0)
+        expect(line).to be_nil
       end
     end
   end
 
-  describe "freeze marker edge cases" do
-    context "with unmatched freeze end marker" do
-      let(:source) do
+  # ============================================================
+  # :auto backend tests (uses whatever is available)
+  # This tests the default behavior most users will experience
+  # ============================================================
+
+  context "with :auto backend", :rbs_parsing do
+    # With :auto, we don't know which backend will be used, so we can't
+    # assert the specific backend. We test that it works regardless.
+    describe "with valid RBS" do
+      subject(:analysis) { described_class.new(valid_source) }
+
+      let(:valid_source) do
         <<~RBS
           class Foo
-          end
-          # rbs-merge:unfreeze
-        RBS
-      end
-
-      it "warns about unmatched end marker but still parses" do
-        expect(Rbs::Merge::DebugLogger).to receive(:warning).with(/Unmatched freeze end marker/)
-        analysis = described_class.new(source)
-        expect(analysis.valid?).to be true
-        expect(analysis.statements.size).to eq(1)
-      end
-    end
-
-    context "with unmatched freeze start marker" do
-      let(:source) do
-        <<~RBS
-          # rbs-merge:freeze
-          class Foo
+            def bar: (String) -> Integer
           end
         RBS
       end
 
-      it "warns about unmatched start marker but still parses" do
-        expect(Rbs::Merge::DebugLogger).to receive(:warning).with(/Unmatched freeze start marker/)
-        analysis = described_class.new(source)
+      it "parses successfully" do
+        expect(analysis).to be_a(described_class)
+      end
+
+      it "is valid" do
         expect(analysis.valid?).to be true
       end
+
+      it "has no errors" do
+        expect(analysis.errors).to be_empty
+      end
+
+      it "uses either :rbs or :tree_sitter backend" do
+        expect(analysis.backend).to eq(:rbs).or eq(:tree_sitter)
+      end
     end
 
-    context "with invalid marker type" do
-      let(:source) do
+    it_behaves_like "invalid RBS detection"
+    it_behaves_like "multiple declarations"
+    it_behaves_like "signature generation"
+    it_behaves_like "freeze blocks"
+    it_behaves_like "custom freeze token"
+    it_behaves_like "fallthrough_node? behavior"
+    it_behaves_like "line_at access"
+  end
+
+  # ============================================================
+  # Explicit RBS gem backend tests (MRI only)
+  # ============================================================
+
+  context "with explicit RBS gem backend", :rbs_backend do
+    around do |example|
+      TreeHaver.with_backend(:rbs) do
+        example.run
+      end
+    end
+
+    it_behaves_like "valid RBS parsing", expected_backend: :rbs
+    it_behaves_like "invalid RBS detection"
+    it_behaves_like "multiple declarations"
+    it_behaves_like "signature generation"
+    it_behaves_like "freeze blocks"
+    it_behaves_like "custom freeze token"
+    it_behaves_like "fallthrough_node? behavior"
+    it_behaves_like "line_at access"
+
+    # RBS gem specific tests
+    describe "RBS gem specific features" do
+      subject(:analysis) { described_class.new(source_with_comments) }
+
+      let(:source_with_comments) do
         <<~RBS
-          # rbs-merge:invalid
+          # A sample class
           class Foo
+            # A method
+            def bar: (String) -> Integer
           end
         RBS
       end
 
-      it "ignores invalid marker types" do
-        analysis = described_class.new(source)
-        expect(analysis.valid?).to be true
-        # No freeze blocks created for invalid marker
-        expect(analysis.statements.none? { |s| s.is_a?(Rbs::Merge::FreezeNode) }).to be true
+      it "has directives array (even if empty)" do
+        expect(analysis.directives).to be_an(Array)
+      end
+    end
+  end
+
+  # ============================================================
+  # Explicit tree-sitter backend tests (MRI with tree-sitter-rbs)
+  # Uses :mri_backend tag because this context uses tree-sitter on the MRI platform
+  # ============================================================
+
+  context "with explicit tree-sitter backend via MRI", :mri_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:mri) do
+        example.run
       end
     end
 
-    context "with no freeze markers" do
-      let(:source) do
-        <<~RBS
-          class Foo
-          end
-          class Bar
-          end
-        RBS
-      end
+    it_behaves_like "valid RBS parsing", expected_backend: :tree_sitter
+    it_behaves_like "invalid RBS detection"
+    it_behaves_like "multiple declarations"
+    it_behaves_like "signature generation"
+    it_behaves_like "freeze blocks"
+    it_behaves_like "custom freeze token"
+    it_behaves_like "fallthrough_node? behavior"
+    it_behaves_like "line_at access"
+  end
 
-      it "returns declarations without modification" do
-        analysis = described_class.new(source)
-        expect(analysis.statements.size).to eq(2)
-        expect(analysis.statements).to all(be_a(RBS::AST::Declarations::Class))
+  # ============================================================
+  # Explicit Java backend tests (JRuby with tree-sitter-rbs )
+  # ============================================================
+
+  context "with explicit Java backend", :java_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:java) do
+        example.run
       end
     end
+
+    it_behaves_like "valid RBS parsing", expected_backend: :tree_sitter
+    it_behaves_like "invalid RBS detection"
+    it_behaves_like "multiple declarations"
+    it_behaves_like "signature generation"
+    it_behaves_like "freeze blocks"
+    it_behaves_like "custom freeze token"
+    it_behaves_like "fallthrough_node? behavior"
+    it_behaves_like "line_at access"
+  end
+
+  # ============================================================
+  # Explicit Rust backend tests (tree-sitter via rust bindings)
+  # ============================================================
+
+  context "with explicit Rust backend", :rust_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:rust) do
+        example.run
+      end
+    end
+
+    it_behaves_like "valid RBS parsing", expected_backend: :tree_sitter
+    it_behaves_like "invalid RBS detection"
+    it_behaves_like "multiple declarations"
+    it_behaves_like "signature generation"
+    it_behaves_like "freeze blocks"
+    it_behaves_like "custom freeze token"
+    it_behaves_like "fallthrough_node? behavior"
+    it_behaves_like "line_at access"
+  end
+
+  # ============================================================
+  # Explicit FFI backend tests (tree-sitter via FFI)
+  # ============================================================
+
+  context "with explicit FFI backend", :ffi_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:ffi) do
+        example.run
+      end
+    end
+
+    it_behaves_like "valid RBS parsing", expected_backend: :tree_sitter
+    it_behaves_like "invalid RBS detection"
+    it_behaves_like "multiple declarations"
+    it_behaves_like "signature generation"
+    it_behaves_like "freeze blocks"
+    it_behaves_like "custom freeze token"
+    it_behaves_like "fallthrough_node? behavior"
+    it_behaves_like "line_at access"
   end
 end

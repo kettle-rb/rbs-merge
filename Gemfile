@@ -8,7 +8,8 @@ git_source(:gitlab) { |repo_name| "https://gitlab.com/#{repo_name}" }
 # Specify your gem's dependencies in psych-merge.gemspec
 gemspec
 
-eval_gemfile "gemfiles/modular/jruby.gemfile"
+# runtime dependencies that we can't add to gemspec due to platform differences
+eval_gemfile "gemfiles/modular/tree_sitter.gemfile"
 
 eval_gemfile "gemfiles/modular/debug.gemfile"
 eval_gemfile "gemfiles/modular/coverage.gemfile"
@@ -16,7 +17,3 @@ eval_gemfile "gemfiles/modular/style.gemfile"
 eval_gemfile "gemfiles/modular/documentation.gemfile"
 eval_gemfile "gemfiles/modular/optional.gemfile"
 eval_gemfile "gemfiles/modular/x_std_libs.gemfile"
-
-if ENV.fetch("KETTLE_RB_DEV", "false").casecmp?("true")
-  gem "ast-merge", path: "../../"
-end

@@ -16,5 +16,5 @@ platform "jruby" do
   # JRuby does not yet support RBS 1.7+, which was refactored to use a C extension to replace the native Ruby racc
   # https://github.com/ruby/rbs/issues/2067
   # https://github.com/ruby/rbs/pull/788
-  gem "rbs", "< 1.7"
+  gem "rbs", ">= 3.10"
 end

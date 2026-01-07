@@ -1,9 +1,13 @@
 # frozen_string_literal: true
 
 # External gems
-require "rbs"
+# NOTE: rbs gem is NOT required here - it's loaded dynamically by the rbs backend
+# when needed. This allows rbs-merge to work on JRuby with tree-sitter-rbs.
 require "version_gem"
 require "set"
+
+# tree_haver provides unified parsing via multiple backends
+require "tree_haver"
 
 # Shared merge infrastructure
 require "ast/merge"
@@ -70,12 +74,40 @@ module Rbs
     autoload :DebugLogger, "rbs/merge/debug_logger"
     autoload :FreezeNode, "rbs/merge/freeze_node"
     autoload :MergeResult, "rbs/merge/merge_result"
+    autoload :NodeTypeNormalizer, "rbs/merge/node_type_normalizer"
+    autoload :NodeWrapper, "rbs/merge/node_wrapper"
     autoload :FileAnalysis, "rbs/merge/file_analysis"
     autoload :ConflictResolver, "rbs/merge/conflict_resolver"
     autoload :FileAligner, "rbs/merge/file_aligner"
     autoload :SmartMerger, "rbs/merge/smart_merger"
+
+    # Backends module containing RBS gem backend for TreeHaver integration
+    module Backends
+      autoload :RbsBackend, "rbs/merge/backends/rbs_backend"
+    end
+
+    # Register the RBS backend with TreeHaver
+    #
+    # This allows TreeHaver.parser_for(:rbs) to use the RBS gem backend
+    # when available, providing a consistent API across all parsing backends.
+    #
+    # @api private
+    def self.register_backend!
+      return if @backend_registered
+
+      TreeHaver.register_language(
+        :rbs,
+        backend_module: Backends::RbsBackend,
+        backend_type: :rbs,
+        gem_name: "rbs"
+      )
+      @backend_registered = true
+    end
   end
 end
+
+# Register the RBS backend with TreeHaver when this gem is loaded
+Rbs::Merge.register_backend!
 
 Rbs::Merge::Version.class_eval do
   extend VersionGem::Basic

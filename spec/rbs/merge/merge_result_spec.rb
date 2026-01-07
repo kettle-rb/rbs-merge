@@ -2,7 +2,9 @@
 
 require "ast/merge/rspec/shared_examples"
 
-RSpec.describe Rbs::Merge::MergeResult do
+# MergeResult specs - works with any RBS parser backend
+# Tagged with :rbs_parsing since FileAnalysis supports both RBS gem and tree-sitter-rbs
+RSpec.describe Rbs::Merge::MergeResult, :rbs_parsing do
   let(:template_source) do
     <<~RBS
       class Foo
@@ -196,7 +198,13 @@ RSpec.describe Rbs::Merge::MergeResult do
     end
   end
 
-  describe "extract_lines with comments" do
+  describe "extract_lines with comments", :rbs_backend do
+    around do |example|
+      TreeHaver.with_backend(:rbs) do
+        example.run
+      end
+    end
+
     let(:source_with_comments) do
       <<~RBS
         # This is a comment for the class

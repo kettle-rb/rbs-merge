@@ -2,7 +2,9 @@
 
 require "ast/merge/rspec/shared_examples"
 
-RSpec.describe Rbs::Merge::ConflictResolver do
+# ConflictResolver specs - works with any RBS parser backend
+# Tagged with :rbs_parsing since FileAnalysis supports both RBS gem and tree-sitter-rbs
+RSpec.describe Rbs::Merge::ConflictResolver, :rbs_parsing do
   # Use shared examples to validate base ConflictResolverBase integration
   # Note: rbs-merge uses the :node strategy
   it_behaves_like "Ast::Merge::ConflictResolverBase" do

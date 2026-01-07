@@ -115,9 +115,18 @@ module Rbs
       def build_signature_map(statements, analysis)
         map = Hash.new { |h, k| h[k] = [] }
 
-        statements.each_with_index do |_stmt, idx|
+        statements.each_with_index do |stmt, idx|
           sig = analysis.signature_at(idx)
           map[sig] << idx if sig
+
+          # For FreezeNodes, also index by the signatures of contained nodes
+          # This allows matching a freeze block with the non-frozen version of the same declaration
+          if stmt.is_a?(FreezeNode) && stmt.nodes.any?
+            stmt.nodes.each do |contained_node|
+              contained_sig = analysis.generate_signature(contained_node)
+              map[contained_sig] << idx if contained_sig
+            end
+          end
         end
 
         map

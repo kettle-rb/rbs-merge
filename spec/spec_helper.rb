@@ -24,9 +24,13 @@ end
 # this library
 require "rbs/merge"
 
+# Support files (including dependency tags for conditional test execution)
+Dir[File.join(__dir__, "support", "**", "*.rb")].each { |f| require f }
+
 RSpec.configure do |config|
   config.before do
     # Speed up polling loops
     allow(described_class).to receive(:sleep) unless described_class.nil?
   end
 end
+

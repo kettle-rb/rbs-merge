@@ -78,8 +78,10 @@ module Rbs
         unclosed = []
 
         @overlapping_nodes.each do |node|
-          node_start = node.location.start_line
-          node_end = node.location.end_line
+          node_start = get_node_start_line(node)
+          node_end = get_node_end_line(node)
+
+          next unless node_start && node_end
 
           # Check if node is fully contained (valid)
           fully_contained = node_start >= @start_line && node_end <= @end_line
@@ -100,8 +102,10 @@ module Rbs
         return if unclosed.empty?
 
         node_names = unclosed.map do |n|
-          name = n.respond_to?(:name) ? n.name.to_s : n.class.name.split("::").last
-          "#{name} (lines #{n.location.start_line}-#{n.location.end_line})"
+          name = extract_node_name(n)
+          start_ln = get_node_start_line(n)
+          end_ln = get_node_end_line(n)
+          "#{name} (lines #{start_ln}-#{end_ln})"
         end.join(", ")
 
         raise InvalidStructureError.new(
@@ -111,6 +115,63 @@ module Rbs
           end_line: @end_line,
           unclosed_nodes: unclosed,
         )
+      end
+
+      # Get start line for a node (works with both backends)
+      # @param node [Object] The node
+      # @return [Integer, nil]
+      def get_node_start_line(node)
+        if node.respond_to?(:start_line)
+          node.start_line
+        elsif node.respond_to?(:location) && node.location
+          node.location.start_line
+        elsif node.respond_to?(:start_point) && node.start_point
+          node.start_point.row + 1
+        end
+      end
+
+      # Get end line for a node (works with both backends)
+      # @param node [Object] The node
+      # @return [Integer, nil]
+      def get_node_end_line(node)
+        if node.respond_to?(:end_line)
+          node.end_line
+        elsif node.respond_to?(:location) && node.location
+          node.location.end_line
+        elsif node.respond_to?(:end_point) && node.end_point
+          node.end_point.row + 1
+        end
+      end
+
+      # Extract a meaningful name from a node for error messages
+      # @param node [Object] The node
+      # @return [String]
+      def extract_node_name(node)
+        # Try NodeWrapper or RBS gem node's name method
+        if node.respond_to?(:name)
+          name = node.name
+          return name.to_s unless name.nil? || name.to_s.empty?
+        end
+
+        # For TreeHaver::Node, try to find name in children
+        if node.respond_to?(:each)
+          node.each do |child|
+            child_type = child.respond_to?(:type) ? child.type.to_s : ""
+            if child_type.end_with?("_name") || %w[constant identifier].include?(child_type)
+              if child.respond_to?(:text)
+                text = begin
+                  child.text
+                rescue ArgumentError
+                  nil
+                end
+                return text if text && !text.empty?
+              end
+            end
+          end
+        end
+
+        # Fallback to class name
+        node.class.name.split("::").last
       end
     end
   end

@@ -2,7 +2,9 @@
 
 require "ast/merge/rspec/shared_examples"
 
-RSpec.describe Rbs::Merge::FreezeNode do
+# FreezeNode specs - works with any RBS parser backend
+# Tagged with :rbs_parsing since FileAnalysis supports both RBS gem and tree-sitter-rbs
+RSpec.describe Rbs::Merge::FreezeNode, :rbs_parsing do
   # Use shared examples to validate base FreezeNodeBase integration
   it_behaves_like "Ast::Merge::FreezeNodeBase" do
     let(:freeze_node_class) { described_class }
@@ -71,7 +73,7 @@ RSpec.describe Rbs::Merge::FreezeNode do
   end
 
   describe "#nodes" do
-    it "contains declarations within the freeze block" do
+    it "contains declarations within the freeze block", :rbs_backend do
       freeze_node = analysis.freeze_blocks.first
       expect(freeze_node.nodes.size).to eq(1)
       expect(freeze_node.nodes.first).to be_a(RBS::AST::Declarations::TypeAlias)
@@ -184,12 +186,12 @@ RSpec.describe Rbs::Merge::FreezeNode do
 
         # Create a mock node without :name method that partially overlaps
         # Freeze block: lines 2-4, Node: lines 1-3 (partial overlap)
-        nameless_node = double(
-          "NamelessNode",
-          location: double(start_line: 1, end_line: 3),
-        )
-        # Explicitly make it NOT respond to :name
-        allow(nameless_node).to receive(:respond_to?).with(:name).and_return(false)
+        nameless_node = double("NamelessNode")
+        # Default to false for all respond_to? calls
+        allow(nameless_node).to receive(:respond_to?).and_return(false)
+        # Override specific ones we need
+        allow(nameless_node).to receive(:respond_to?).with(:location).and_return(true)
+        allow(nameless_node).to receive(:location).and_return(double(start_line: 1, end_line: 3))
 
         # Validation happens during initialize, so the error is raised there
         # Freeze block lines 2-4, node lines 1-3 creates partial overlap:

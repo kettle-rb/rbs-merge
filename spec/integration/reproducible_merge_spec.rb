@@ -3,7 +3,9 @@
 require "rbs/merge"
 require "ast/merge/rspec/shared_examples"
 
-RSpec.describe "RBS reproducible merge" do
+# Integration specs - works with any RBS parser backend
+# Tagged with :rbs_parsing since SmartMerger supports both RBS gem and tree-sitter-rbs
+RSpec.describe "RBS reproducible merge", :rbs_parsing do
   let(:fixtures_path) { File.expand_path("../fixtures/reproducible", __dir__) }
   let(:merger_class) { Rbs::Merge::SmartMerger }
   let(:file_extension) { "rbs" }

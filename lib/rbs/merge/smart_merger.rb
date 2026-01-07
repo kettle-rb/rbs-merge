@@ -210,7 +210,11 @@ module Rbs
 
         case resolution[:source]
         when :template
-          @result.add_from_template(entry[:template_index], decision: resolution[:decision])
+          if entry[:template_decl].is_a?(FreezeNode)
+            @result.add_freeze_block(entry[:template_decl])
+          else
+            @result.add_from_template(entry[:template_index], decision: resolution[:decision])
+          end
         when :destination
           if entry[:dest_decl].is_a?(FreezeNode)
             @result.add_freeze_block(entry[:dest_decl])
@@ -228,7 +232,12 @@ module Rbs
       def process_template_only(entry)
         return unless @add_template_only_nodes
 
-        @result.add_from_template(entry[:template_index], decision: MergeResult::DECISION_ADDED)
+        # FreezeNodes from template should always be added
+        if entry[:template_decl].is_a?(FreezeNode)
+          @result.add_freeze_block(entry[:template_decl])
+        else
+          @result.add_from_template(entry[:template_index], decision: MergeResult::DECISION_ADDED)
+        end
       end
 
       # Process a destination-only declaration
@@ -278,16 +287,46 @@ module Rbs
         decl = (pref == :template) ? template_decl : dest_decl
         analysis = (pref == :template) ? @template_analysis : @dest_analysis
 
-        start_line = decl.location.start_line
-        end_line = decl.location.end_line
+        # Support both NodeWrapper (has start_line/end_line) and RBS gem nodes (has location)
+        start_line = get_start_line(decl)
+        end_line = get_end_line(decl)
 
-        # Include leading comment if present
+        # Include leading comment if present (RBS gem nodes only)
         if decl.respond_to?(:comment) && decl.comment
-          comment_start = decl.comment.location.start_line
-          start_line = comment_start if comment_start < start_line
+          comment_loc = decl.comment.respond_to?(:location) ? decl.comment.location : nil
+          if comment_loc
+            comment_start = comment_loc.start_line
+            start_line = comment_start if comment_start < start_line
+          end
         end
 
         (start_line..end_line).map { |ln| analysis.line_at(ln) }.join("\n") + "\n"
+      end
+
+      # Get start line for a declaration (works with both backends)
+      # @param decl [Object] Declaration (NodeWrapper or RBS::AST::*)
+      # @return [Integer]
+      def get_start_line(decl)
+        if decl.respond_to?(:start_line)
+          decl.start_line
+        elsif decl.respond_to?(:location) && decl.location
+          decl.location.start_line
+        else
+          1
+        end
+      end
+
+      # Get end line for a declaration (works with both backends)
+      # @param decl [Object] Declaration (NodeWrapper or RBS::AST::*)
+      # @return [Integer]
+      def get_end_line(decl)
+        if decl.respond_to?(:end_line)
+          decl.end_line
+        elsif decl.respond_to?(:location) && decl.location
+          decl.location.end_line
+        else
+          1
+        end
       end
     end
   end

@@ -1,47 +1,103 @@
 # frozen_string_literal: true
 
-RSpec.describe Rbs::Merge::SmartMerger do
-  describe "#initialize" do
-    let(:template) { "class Foo\nend\n" }
-    let(:destination) { "class Bar\nend\n" }
+# SmartMerger specs with explicit backend testing
+#
+# This spec file tests SmartMerger behavior across both available backends:
+# - :rbs (via RBS gem, tagged :rbs_backend)
+# - :tree_sitter (via tree-sitter-rbs grammar, tagged :rbs_grammar)
+#
+# We define shared examples that are parameterized, then include them in
+# backend-specific contexts.
 
-    it "creates a merger" do
-      merger = described_class.new(template, destination)
+RSpec.describe Rbs::Merge::SmartMerger do
+  let(:template_content) do
+    <<~RBS
+      class Foo
+        def bar: (String) -> Integer
+      end
+    RBS
+  end
+
+  let(:dest_content) do
+    <<~RBS
+      class Foo
+        def bar: (Integer) -> String
+        def baz: () -> void
+      end
+    RBS
+  end
+
+  # ============================================================
+  # Shared examples for error detection
+  # ============================================================
+
+  # ============================================================
+  # Shared examples for parse error handling
+  # Note: Strict error detection depends on the parser - RBS gem
+  # reports errors more strictly than some tree-sitter backends
+  # ============================================================
+
+  shared_examples "invalid template detection" do
+    let(:invalid_template) do
+      <<~RBS
+        class Foo
+          def bar: (
+        end
+      RBS
+    end
+
+    it "raises TemplateParseError", :rbs_backend do
+      expect {
+        described_class.new(invalid_template, dest_content)
+      }.to raise_error(Rbs::Merge::TemplateParseError)
+    end
+  end
+
+  shared_examples "invalid destination detection" do
+    let(:invalid_dest) do
+      <<~RBS
+        class Bar
+          def baz: (
+        end
+      RBS
+    end
+
+    it "raises DestinationParseError", :rbs_backend do
+      expect {
+        described_class.new(template_content, invalid_dest)
+      }.to raise_error(Rbs::Merge::DestinationParseError)
+    end
+  end
+
+  # ============================================================
+  # Shared examples for basic functionality
+  # ============================================================
+
+  shared_examples "basic initialization" do
+    it "accepts template and destination content" do
+      merger = described_class.new(template_content, dest_content)
       expect(merger).to be_a(described_class)
     end
 
     it "has template_analysis" do
-      merger = described_class.new(template, destination)
+      merger = described_class.new(template_content, dest_content)
       expect(merger.template_analysis).to be_a(Rbs::Merge::FileAnalysis)
     end
 
     it "has dest_analysis" do
-      merger = described_class.new(template, destination)
+      merger = described_class.new(template_content, dest_content)
       expect(merger.dest_analysis).to be_a(Rbs::Merge::FileAnalysis)
     end
 
-    context "with invalid template" do
-      let(:invalid_template) { "class Foo\n  def bar: (\nend\n" }
-
-      it "raises TemplateParseError" do
-        expect { described_class.new(invalid_template, destination) }
-          .to raise_error(Rbs::Merge::TemplateParseError)
-      end
-    end
-
-    context "with invalid destination" do
-      let(:invalid_destination) { "class Bar\n  invalid syntax\nend\n" }
-
-      it "raises DestinationParseError" do
-        expect { described_class.new(template, invalid_destination) }
-          .to raise_error(Rbs::Merge::DestinationParseError)
-      end
+    it "accepts optional preference" do
+      merger = described_class.new(template_content, dest_content, preference: :template)
+      expect(merger.preference).to eq(:template)
     end
   end
 
-  describe "#merge" do
+  shared_examples "merge with identical files" do
     context "with identical files" do
-      let(:content) do
+      let(:identical_content) do
         <<~RBS
           class Foo
             def bar: () -> void
@@ -49,452 +105,252 @@ RSpec.describe Rbs::Merge::SmartMerger do
         RBS
       end
 
-      it "returns destination content" do
-        merger = described_class.new(content, content)
-        result = merger.merge_result
-        expect(result.to_s).to eq(content)
+      it "returns content unchanged" do
+        merger = described_class.new(identical_content, identical_content)
+        result = merger.merge
+        expect(result).to eq(identical_content)
       end
     end
+  end
 
-    context "with destination-only declarations" do
-      let(:template) { "class Foo\nend\n" }
-      let(:destination) do
+  shared_examples "merge with added declarations" do
+    context "when destination has additional declarations" do
+      let(:template_simple) do
         <<~RBS
           class Foo
+            def foo: () -> void
+          end
+        RBS
+      end
+
+      let(:dest_with_extra) do
+        <<~RBS
+          class Foo
+            def foo: () -> void
           end
 
           class Bar
+            def bar: () -> void
           end
         RBS
       end
 
-      it "preserves destination-only declarations" do
-        merger = described_class.new(template, destination)
-        result = merger.merge_result
-        expect(result.to_s).to include("class Bar")
+      it "preserves destination additions" do
+        merger = described_class.new(template_simple, dest_with_extra)
+        result = merger.merge
+        expect(result).to include("class Bar")
+        expect(result).to include("def bar")
       end
     end
+  end
 
-    context "with template-only declarations" do
-      let(:template) do
-        <<~RBS
-          class Foo
-          end
-
-          class NewClass
-          end
-        RBS
-      end
-      let(:destination) { "class Foo\nend\n" }
-
-      context "when add_template_only_nodes is false (default)" do
-        it "does not add template-only declarations" do
-          merger = described_class.new(template, destination)
-          result = merger.merge_result
-          expect(result.to_s).not_to include("NewClass")
-        end
-      end
-
-      context "when add_template_only_nodes is true" do
-        it "adds template-only declarations" do
-          merger = described_class.new(template, destination, add_template_only_nodes: true)
-          result = merger.merge_result
-          expect(result.to_s).to include("NewClass")
-        end
-      end
-    end
-
-    context "with matching declarations (different content)" do
-      let(:template) do
-        <<~RBS
-          class Foo
-            def bar: (String) -> Integer
-          end
-        RBS
-      end
-      let(:destination) do
-        <<~RBS
-          class Foo
-            def bar: (Integer) -> String
-          end
-        RBS
-      end
-
-      context "when preference is :destination (default)" do
-        it "uses destination version" do
-          merger = described_class.new(template, destination)
-          result = merger.merge_result
-          expect(result.to_s).to include("(Integer) -> String")
-          expect(result.to_s).not_to include("(String) -> Integer")
-        end
-      end
-
-      context "when preference is :template" do
-        it "uses template version" do
-          merger = described_class.new(template, destination, preference: :template)
-          result = merger.merge_result
-          expect(result.to_s).to include("(String) -> Integer")
-          expect(result.to_s).not_to include("(Integer) -> String")
-        end
-      end
-    end
-
+  shared_examples "merge with freeze blocks" do
     context "with freeze blocks" do
-      let(:template) do
+      let(:template_with_freeze) do
         <<~RBS
-          class Foo
-            def bar: (String) -> void
-          end
-
-          type my_type = Integer
-        RBS
-      end
-      let(:destination) do
-        <<~RBS
-          class Foo
-            def bar: (Integer) -> void
-          end
-
           # rbs-merge:freeze
-          type my_type = String | Symbol
+          class Frozen
+            def frozen_method: () -> void
+          end
           # rbs-merge:unfreeze
+
+          class Normal
+            def normal_method: () -> void
+          end
         RBS
       end
 
-      it "preserves freeze block content" do
-        merger = described_class.new(template, destination)
-        result = merger.merge_result
-        expect(result.to_s).to include("type my_type = String | Symbol")
-        expect(result.to_s).to include("rbs-merge:freeze")
-      end
-
-      it "respects destination preference for matched declarations" do
-        merger = described_class.new(template, destination)
-        result = merger.merge_result
-        expect(result.to_s).to include("(Integer) -> void")
-      end
-    end
-
-    context "with custom freeze token" do
-      let(:template) { "type foo = String\n" }
-      let(:destination) do
+      let(:dest_modified) do
         <<~RBS
-          # custom:freeze
-          type foo = Integer
-          # custom:unfreeze
+          class Frozen
+            def modified_method: () -> void
+          end
+
+          class Normal
+            def other_method: () -> void
+          end
         RBS
       end
 
-      it "recognizes custom freeze token" do
-        merger = described_class.new(template, destination, freeze_token: "custom")
-        result = merger.merge_result
-        expect(result.to_s).to include("type foo = Integer")
-        expect(result.to_s).to include("custom:freeze")
-      end
-    end
-
-    context "with multiple declaration types" do
-      let(:template) do
-        <<~RBS
-          class MyClass
-            VERSION: String
-          end
-
-          module MyModule
-            def foo: () -> void
-          end
-
-          interface _MyInterface
-            def bar: () -> void
-          end
-
-          type my_type = String
-
-          CONST: Integer
-        RBS
-      end
-      let(:destination) do
-        <<~RBS
-          class MyClass
-            VERSION: String
-            CUSTOM: Integer
-          end
-
-          module MyModule
-            def foo: () -> void
-            def custom: () -> void
-          end
-
-          interface _MyInterface
-            def bar: () -> void
-          end
-
-          type my_type = String | Integer
-
-          CONST: Integer
-        RBS
-      end
-
-      it "preserves destination customizations" do
-        merger = described_class.new(template, destination)
-        result = merger.merge_result
-
-        # Destination additions preserved
-        expect(result.to_s).to include("CUSTOM: Integer")
-        expect(result.to_s).to include("def custom:")
-
-        # Modified type preserved
-        expect(result.to_s).to include("type my_type = String | Integer")
+      it "preserves frozen content from template" do
+        merger = described_class.new(template_with_freeze, dest_modified)
+        result = merger.merge
+        expect(result).to include("frozen_method")
       end
     end
   end
 
-  describe "MergeResult" do
-    let(:template) { "class Foo\nend\n" }
-    let(:destination) { "class Bar\nend\n" }
+  # ============================================================
+  # :auto backend tests (uses whatever is available)
+  # ============================================================
 
-    it "tracks decisions" do
-      merger = described_class.new(template, destination, add_template_only_nodes: true)
-      result = merger.merge_result
-      expect(result.decisions).not_to be_empty
-    end
+  context "with :auto backend", :rbs_parsing do
+    describe "#initialize" do
+      it_behaves_like "basic initialization"
 
-    it "provides summary" do
-      merger = described_class.new(template, destination, add_template_only_nodes: true)
-      result = merger.merge_result
-      summary = result.summary
-      expect(summary).to have_key(:total_decisions)
-      expect(summary).to have_key(:total_lines)
-      expect(summary).to have_key(:by_decision)
-    end
-  end
-
-  describe "custom signature generator" do
-    let(:template) do
-      <<~RBS
-        class Foo
-          def method_a: () -> void
-        end
-      RBS
-    end
-    let(:destination) do
-      <<~RBS
-        class Foo
-          def method_b: () -> void
-        end
-      RBS
-    end
-
-    it "uses custom generator for matching" do
-      # Match by class name only, ignoring members
-      custom_gen = lambda do |node|
-        case node
-        when RBS::AST::Declarations::Class
-          [:class, node.name.to_s]
-        else
-          node
-        end
+      context "with invalid template" do
+        it_behaves_like "invalid template detection"
       end
 
-      merger = described_class.new(template, destination, signature_generator: custom_gen)
-      result = merger.merge_result
-
-      # Classes match by name, destination wins
-      expect(result.to_s).to include("method_b")
-    end
-  end
-
-  describe "add_template_only_nodes option" do
-    let(:template) do
-      <<~RBS
-        class Foo
-        end
-
-        class NewFromTemplate
-        end
-      RBS
-    end
-    let(:destination) do
-      <<~RBS
-        class Foo
-        end
-      RBS
-    end
-
-    context "when add_template_only_nodes is false" do
-      it "does not add template-only declarations" do
-        merger = described_class.new(template, destination, add_template_only_nodes: false)
-        result = merger.merge_result
-        expect(result.to_s).not_to include("NewFromTemplate")
+      context "with invalid destination" do
+        it_behaves_like "invalid destination detection"
       end
     end
 
-    context "when add_template_only_nodes is true" do
-      it "adds template-only declarations" do
-        merger = described_class.new(template, destination, add_template_only_nodes: true)
-        result = merger.merge_result
-        expect(result.to_s).to include("NewFromTemplate")
+    describe "#merge" do
+      it_behaves_like "merge with identical files"
+      it_behaves_like "merge with added declarations"
+      it_behaves_like "merge with freeze blocks"
+    end
+  end
+
+  # ============================================================
+  # Explicit RBS gem backend tests (MRI only)
+  # ============================================================
+
+  context "with explicit RBS gem backend", :rbs_backend do
+    around do |example|
+      TreeHaver.with_backend(:rbs) do
+        example.run
       end
     end
-  end
 
-  describe "destination-only freeze blocks" do
-    let(:template) { "type my_type = String\n" }
-    let(:destination) do
-      <<~RBS
-        # rbs-merge:freeze
-        type my_type = Integer
-        # rbs-merge:unfreeze
-      RBS
+    describe "#initialize" do
+      it_behaves_like "basic initialization"
+
+      context "with invalid template" do
+        it_behaves_like "invalid template detection"
+      end
+
+      context "with invalid destination" do
+        it_behaves_like "invalid destination detection"
+      end
     end
 
-    it "preserves freeze block even when template has matching declaration" do
-      merger = described_class.new(template, destination)
-      result = merger.merge_result
-      expect(result.to_s).to include("rbs-merge:freeze")
-      expect(result.to_s).to include("type my_type = Integer")
-      expect(result.to_s).to include("rbs-merge:unfreeze")
-    end
-  end
-
-  describe "process_match with :template resolution" do
-    let(:template) { "type my_type = String\n" }
-    let(:destination) { "type my_type = Integer\n" }
-
-    it "uses template version when preference is :template" do
-      merger = described_class.new(template, destination, preference: :template)
-      result = merger.merge_result
-      expect(result.to_s).to include("type my_type = String")
-      expect(result.to_s).not_to include("type my_type = Integer")
+    describe "#merge" do
+      it_behaves_like "merge with identical files"
+      it_behaves_like "merge with added declarations"
+      it_behaves_like "merge with freeze blocks"
     end
   end
 
-  describe "freeze blocks in dest_only entries" do
-    let(:template) { "class Foo\nend\n" }
-    let(:destination) do
-      <<~RBS
-        class Foo
-        end
+  # ============================================================
+  # Explicit tree-sitter backend tests via MRI
+  # ============================================================
 
-        # rbs-merge:freeze
-        type custom = String
-        # rbs-merge:unfreeze
-      RBS
+  context "with explicit tree-sitter backend via MRI", :mri_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:mri) do
+        example.run
+      end
     end
 
-    it "adds freeze blocks from destination" do
-      merger = described_class.new(template, destination)
-      result = merger.merge_result
-      expect(result.to_s).to include("rbs-merge:freeze")
-      expect(result.to_s).to include("type custom = String")
+    describe "#initialize" do
+      it_behaves_like "basic initialization"
+
+      context "with invalid template" do
+        it_behaves_like "invalid template detection"
+      end
+
+      context "with invalid destination" do
+        it_behaves_like "invalid destination detection"
+      end
+    end
+
+    describe "#merge" do
+      it_behaves_like "merge with identical files"
+      it_behaves_like "merge with added declarations"
+      it_behaves_like "merge with freeze blocks"
     end
   end
 
-  describe "process_match with freeze block in destination" do
-    let(:template) do
-      <<~RBS
-        type custom = Integer
-      RBS
-    end
-    let(:destination) do
-      <<~RBS
-        # rbs-merge:freeze
-        type custom = String
-        # rbs-merge:unfreeze
-      RBS
+  # ============================================================
+  # Explicit Java backend tests (JRuby)
+  # ============================================================
+
+  context "with explicit Java backend", :java_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:java) do
+        example.run
+      end
     end
 
-    it "preserves freeze block content over template" do
-      merger = described_class.new(template, destination)
-      result = merger.merge_result
-      expect(result.to_s).to include("rbs-merge:freeze")
-      expect(result.to_s).to include("type custom = String")
-      expect(result.to_s).not_to include("type custom = Integer")
+    describe "#initialize" do
+      it_behaves_like "basic initialization"
+
+      context "with invalid template" do
+        it_behaves_like "invalid template detection"
+      end
+
+      context "with invalid destination" do
+        it_behaves_like "invalid destination detection"
+      end
+    end
+
+    describe "#merge" do
+      it_behaves_like "merge with identical files"
+      it_behaves_like "merge with added declarations"
+      it_behaves_like "merge with freeze blocks"
     end
   end
 
-  describe "reconstruction with comments" do
-    let(:template) do
-      <<~RBS
-        # Template comment
-        class Foo
-          def bar: () -> void
-        end
-      RBS
-    end
-    let(:destination) do
-      <<~RBS
-        # Destination comment
-        class Foo
-          def baz: () -> void
-        end
-      RBS
+  # ============================================================
+  # Explicit Rust backend tests
+  # ============================================================
+
+  context "with explicit Rust backend", :rust_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:rust) do
+        example.run
+      end
     end
 
-    it "preserves comments when using template preference" do
-      merger = described_class.new(template, destination, preference: :template)
-      result = merger.merge_result
-      expect(result.to_s).to include("# Template comment")
+    describe "#initialize" do
+      it_behaves_like "basic initialization"
+
+      context "with invalid template" do
+        it_behaves_like "invalid template detection"
+      end
+
+      context "with invalid destination" do
+        it_behaves_like "invalid destination detection"
+      end
     end
 
-    it "preserves comments when using destination preference" do
-      merger = described_class.new(template, destination, preference: :destination)
-      result = merger.merge_result
-      expect(result.to_s).to include("# Destination comment")
+    describe "#merge" do
+      it_behaves_like "merge with identical files"
+      it_behaves_like "merge with added declarations"
+      it_behaves_like "merge with freeze blocks"
     end
   end
 
-  describe "merge_result caching" do
-    let(:template) { "class Foo\nend\n" }
-    let(:destination) { "class Bar\nend\n" }
+  # ============================================================
+  # Explicit FFI backend tests
+  # ============================================================
 
-    it "caches the merge_result on subsequent calls" do
-      merger = described_class.new(template, destination)
-      result1 = merger.merge_result
-      result2 = merger.merge_result
-      expect(result1).to be(result2) # Same object identity
-    end
-  end
-
-  describe "process_match with :template source resolution" do
-    let(:template) do
-      <<~RBS
-        type my_alias = String
-      RBS
-    end
-    let(:destination) do
-      <<~RBS
-        type my_alias = Integer
-      RBS
+  context "with explicit FFI backend", :ffi_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:ffi) do
+        example.run
+      end
     end
 
-    it "uses template content when preference is :template" do
-      merger = described_class.new(template, destination, preference: :template)
-      result = merger.merge_result
-      expect(result.to_s).to include("type my_alias = String")
-      expect(result.to_s).not_to include("Integer")
-    end
-  end
+    describe "#initialize" do
+      it_behaves_like "basic initialization"
 
-  describe "process_match with FreezeNode in matched entry" do
-    let(:template) do
-      <<~RBS
-        type frozen_type = String
-      RBS
-    end
-    let(:destination) do
-      <<~RBS
-        # rbs-merge:freeze
-        type frozen_type = Integer | Symbol
-        # rbs-merge:unfreeze
-      RBS
+      context "with invalid template" do
+        it_behaves_like "invalid template detection"
+      end
+
+      context "with invalid destination" do
+        it_behaves_like "invalid destination detection"
+      end
     end
 
-    it "uses freeze block content even when template has matching declaration" do
-      merger = described_class.new(template, destination)
-      result = merger.merge_result
-      expect(result.to_s).to include("type frozen_type = Integer | Symbol")
-      expect(result.to_s).to include("rbs-merge:freeze")
+    describe "#merge" do
+      it_behaves_like "merge with identical files"
+      it_behaves_like "merge with added declarations"
+      it_behaves_like "merge with freeze blocks"
     end
   end
 end

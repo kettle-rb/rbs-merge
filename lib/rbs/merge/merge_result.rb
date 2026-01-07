@@ -74,13 +74,20 @@ module Rbs
       # @param freeze_node [FreezeNode] The freeze block to add
       # @return [void]
       def add_freeze_block(freeze_node)
+        # Use the freeze_node's own analysis to get the correct content
+        # (template freeze blocks should use template lines, dest freeze blocks use dest lines)
+        source_analysis = freeze_node.analysis
         lines = (freeze_node.start_line..freeze_node.end_line).map do |ln|
-          @dest_analysis.line_at(ln)
+          source_analysis.line_at(ln)
         end
         @lines.concat(lines)
+
+        # Determine source based on which analysis the freeze_node belongs to
+        source = (source_analysis == @template_analysis) ? :template : :destination
+
         @decisions << {
           decision: DECISION_FREEZE_BLOCK,
-          source: :destination,
+          source: source,
           start_line: freeze_node.start_line,
           end_line: freeze_node.end_line,
           lines: lines.length,
@@ -148,23 +155,48 @@ module Rbs
       private
 
       # Extract lines for a statement from analysis
-      # @param statement [Object] The statement (declaration, member, or FreezeNode)
+      # @param statement [Object] The statement (declaration, member, FreezeNode, or NodeWrapper)
       # @param analysis [FileAnalysis] The file analysis
       # @return [Array<String>] Lines for the statement
       def extract_lines(statement, analysis)
         if statement.is_a?(FreezeNode)
           (statement.start_line..statement.end_line).map { |ln| analysis.line_at(ln) }
         else
-          start_line = statement.location.start_line
-          end_line = statement.location.end_line
+          # Support both NodeWrapper (has start_line/end_line) and RBS gem nodes (has location)
+          start_line = get_start_line(statement)
+          end_line = get_end_line(statement)
 
-          # Include leading comment if present
+          return [] unless start_line && end_line
+
+          # Include leading comment if present (RBS gem nodes only)
           if statement.respond_to?(:comment) && statement.comment
-            comment_start = statement.comment.location.start_line
-            start_line = comment_start if comment_start < start_line
+            comment_start = statement.comment.location&.start_line
+            start_line = comment_start if comment_start && comment_start < start_line
           end
 
           (start_line..end_line).map { |ln| analysis.line_at(ln) }
+        end
+      end
+
+      # Get start line for a statement (works with both backends)
+      # @param statement [Object] The statement
+      # @return [Integer, nil]
+      def get_start_line(statement)
+        if statement.respond_to?(:start_line)
+          statement.start_line
+        elsif statement.respond_to?(:location) && statement.location
+          statement.location.start_line
+        end
+      end
+
+      # Get end line for a statement (works with both backends)
+      # @param statement [Object] The statement
+      # @return [Integer, nil]
+      def get_end_line(statement)
+        if statement.respond_to?(:end_line)
+          statement.end_line
+        elsif statement.respond_to?(:location) && statement.location
+          statement.location.end_line
         end
       end
     end

@@ -20,6 +20,19 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- **TreeHaver backend integration** - rbs-merge now uses TreeHaver for all parsing,
+  enabling cross-platform RBS parsing:
+  - **`Rbs::Merge::Backends::RbsBackend`** - New TreeHaver-compatible backend module
+    that wraps the RBS gem. Registered with TreeHaver via `register_language(:rbs, ...)`.
+  - On MRI: Uses RBS gem backend (richer AST, comment association)
+  - On JRuby: Uses tree-sitter-rbs via TreeHaver's Java backend
+  - Backend selection respects `TreeHaver.with_backend()` and `TREE_HAVER_BACKEND` env var
+- **`NodeWrapper#comment`** - Delegates to underlying RBS gem node's comment for
+  leading comment association (RBS gem backend only)
+- **`FileAnalysis#compute_tree_sitter_signature`** - Generates signatures for raw
+  TreeHaver::Node objects from tree-sitter backend
+- **`FileAnalysis#extract_tree_sitter_node_name`** - Extracts declaration names from
+  tree-sitter nodes by traversing child nodes
 - `node_typing` parameter for per-node-type merge preferences
   - Enables `preference: { default: :destination, special_type: :template }` pattern
   - Works with custom merge_types assigned via node_typing lambdas
@@ -28,6 +41,28 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- **FileAnalysis now uses TreeHaver exclusively** - Removed separate backend selection
+  logic. `parse_rbs` now calls `TreeHaver.parser_for(:rbs)` which handles all backend
+  selection automatically.
+- **`node_start_line`/`node_end_line` helpers** - Now check for `start_line`/`end_line`
+  methods first (TreeHaver::Node has these), falling back to `location` or `start_point`.
+- **`ConflictResolver#declarations_identical?`** - Now compares text content instead of
+  relying on object equality, enabling cross-backend comparison.
+- **`ConflictResolver#canonical_type`** - Now handles TreeHaver::Node objects in addition
+  to NodeWrapper and RBS gem nodes.
+- **`ConflictResolver#has_members?`** - Now checks for `members` child nodes in
+  TreeHaver::Node objects for tree-sitter backend support.
+- **`ConflictResolver#resolve`** - Now checks for template freeze blocks first, ensuring
+  frozen content from templates is preserved during merge.
+- **`FileAligner#build_signature_map`** - FreezeNodes are now indexed by both their own
+  signature AND the signatures of their contained nodes. This allows freeze blocks to
+  match against the non-frozen version of the same declaration in the other file.
+- **`MergeResult#add_freeze_block`** - Now uses the freeze_node's own analysis for line
+  extraction, ensuring template freeze blocks use template lines (not destination lines).
+- **`SmartMerger#process_match`** - Now handles template FreezeNodes correctly, adding
+  them via `add_freeze_block` when the template side wins.
+- **`SmartMerger#process_template_only`** - FreezeNodes from template are now always
+  added (they represent protected content that must be preserved).
 - **SmartMerger**: Added `**options` for forward compatibility
   - Accepts additional options that may be added to base class in future
   - Passes all options through to `SmartMergerBase`
@@ -43,7 +78,23 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Removed
 
+- **`FileAnalysis#rbs_gem_available?`** - Removed; TreeHaver handles backend availability
+- **`FileAnalysis#parse_with_rbs_gem`** - Removed; replaced by `process_rbs_gem_result`
+- **`FileAnalysis#parse_with_tree_sitter`** - Removed; replaced by `process_tree_sitter_result`
+- **`backend:` parameter from `FileAnalysis#initialize`** - Removed; use
+  `TreeHaver.with_backend()` to control backend selection
+
 ### Fixed
+
+- **Freeze blocks from template now preserved correctly** - Previously, freeze blocks
+  from the template would not match destination declarations because their signatures
+  differed. Now FreezeNodes are indexed by contained node signatures.
+- **FreezeNode name extraction** - `extract_node_name` now handles TreeHaver::Node
+  objects and extracts meaningful names for error messages.
+- **`FreezeNode#get_start_line`/`get_end_line`** - Now properly handle nodes with
+  direct `start_line`/`end_line` methods (TreeHaver::Node).
+- **`SmartMerger#get_start_line`/`get_end_line`** - Added helper methods to support
+  both NodeWrapper and RBS gem nodes in `reconstruct_declaration_with_merged_members`.
 
 ### Security
 

@@ -3,7 +3,7 @@
 source "https://gem.coop"
 
 platforms "jruby" do
-  gem "rbs", "< 1.7"
+  gem "rbs", ">= 3.10"
 end
 
 gemspec path: "../"
