@@ -73,6 +73,8 @@ Please file a bug if you notice a violation of semantic versioning.
   - Gains automatic support for new SmartMergerBase features
   - `max_recursion_depth` parameter is still supported
   - `preference` now accepts Hash for per-type preferences
+- Updated documentation on hostile takeover of RubyGems
+  - https://dev.to/galtzo/hostile-takeover-of-rubygems-my-thoughts-5hlo
 
 ### Deprecated
 
