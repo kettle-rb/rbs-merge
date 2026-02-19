@@ -82,11 +82,14 @@ Gem::Specification.new do |spec|
   spec.executables = []
 
   # Parser and AST infrastructure
-  # Not a runtime dependency because teh C-extensions will not install on JRuby
+  # Not a runtime dependency because the C-extensions will not install on JRuby
   # spec.add_dependency("rbs", ">= 3.1")                                  # ruby >= 3.1.0
 
+  # Parser - tree_haver provides unified tree-sitter & citrus interface
+  spec.add_dependency("tree_haver", "~> 5.0", ">= 5.0.5")                           # ruby >= 3.2.0
+
   # Shared merge infrastructure
-  spec.add_dependency("ast-merge", "~> 3.0", ">= 3.0.0")                # ruby >= 3.2.0
+  spec.add_dependency("ast-merge", "~> 4.0", ">= 4.0.5")                # ruby >= 3.2.0
 
   # Utilities
   spec.add_dependency("version_gem", "~> 1.1", ">= 1.1.9")              # ruby >= 2.2.0
