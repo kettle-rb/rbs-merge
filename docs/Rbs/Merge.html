@@ -79,7 +79,7 @@
   <dl>
     <dt>Defined in:</dt>
     <dd>lib/rbs/merge.rb<span class="defines">,<br />
-  lib/rbs/merge/version.rb,<br /> lib/rbs/merge/freeze_node.rb,<br /> lib/rbs/merge/debug_logger.rb,<br /> lib/rbs/merge/file_aligner.rb,<br /> lib/rbs/merge/merge_result.rb,<br /> lib/rbs/merge/smart_merger.rb,<br /> lib/rbs/merge/file_analysis.rb,<br /> lib/rbs/merge/conflict_resolver.rb</span>
+  lib/rbs/merge/version.rb,<br /> lib/rbs/merge/freeze_node.rb,<br /> lib/rbs/merge/debug_logger.rb,<br /> lib/rbs/merge/file_aligner.rb,<br /> lib/rbs/merge/merge_result.rb,<br /> lib/rbs/merge/node_wrapper.rb,<br /> lib/rbs/merge/smart_merger.rb,<br /> lib/rbs/merge/file_analysis.rb,<br /> lib/rbs/merge/conflict_resolver.rb,<br /> lib/rbs/merge/backends/rbs_backend.rb,<br /> lib/rbs/merge/node_type_normalizer.rb</span>
 </dd>
   </dl>
   
@@ -89,11 +89,11 @@
 <p class="children">
   
     
-      <strong class="modules">Modules:</strong> <span class='object_link'><a href="Merge/DebugLogger.html" title="Rbs::Merge::DebugLogger (module)">DebugLogger</a></span>, <span class='object_link'><a href="Merge/Version.html" title="Rbs::Merge::Version (module)">Version</a></span>
+      <strong class="modules">Modules:</strong> <span class='object_link'><a href="Merge/Backends.html" title="Rbs::Merge::Backends (module)">Backends</a></span>, <span class='object_link'><a href="Merge/DebugLogger.html" title="Rbs::Merge::DebugLogger (module)">DebugLogger</a></span>, <span class='object_link'><a href="Merge/NodeTypeNormalizer.html" title="Rbs::Merge::NodeTypeNormalizer (module)">NodeTypeNormalizer</a></span>, <span class='object_link'><a href="Merge/Version.html" title="Rbs::Merge::Version (module)">Version</a></span>
     
   
     
-      <strong class="classes">Classes:</strong> <span class='object_link'><a href="Merge/ConflictResolver.html" title="Rbs::Merge::ConflictResolver (class)">ConflictResolver</a></span>, <span class='object_link'><a href="Merge/DestinationParseError.html" title="Rbs::Merge::DestinationParseError (class)">DestinationParseError</a></span>, <span class='object_link'><a href="Merge/Error.html" title="Rbs::Merge::Error (class)">Error</a></span>, <span class='object_link'><a href="Merge/FileAligner.html" title="Rbs::Merge::FileAligner (class)">FileAligner</a></span>, <span class='object_link'><a href="Merge/FileAnalysis.html" title="Rbs::Merge::FileAnalysis (class)">FileAnalysis</a></span>, <span class='object_link'><a href="Merge/FreezeNode.html" title="Rbs::Merge::FreezeNode (class)">FreezeNode</a></span>, <span class='object_link'><a href="Merge/MergeResult.html" title="Rbs::Merge::MergeResult (class)">MergeResult</a></span>, <span class='object_link'><a href="Merge/ParseError.html" title="Rbs::Merge::ParseError (class)">ParseError</a></span>, <span class='object_link'><a href="Merge/SmartMerger.html" title="Rbs::Merge::SmartMerger (class)">SmartMerger</a></span>, <span class='object_link'><a href="Merge/TemplateParseError.html" title="Rbs::Merge::TemplateParseError (class)">TemplateParseError</a></span>
+      <strong class="classes">Classes:</strong> <span class='object_link'><a href="Merge/ConflictResolver.html" title="Rbs::Merge::ConflictResolver (class)">ConflictResolver</a></span>, <span class='object_link'><a href="Merge/DestinationParseError.html" title="Rbs::Merge::DestinationParseError (class)">DestinationParseError</a></span>, <span class='object_link'><a href="Merge/Error.html" title="Rbs::Merge::Error (class)">Error</a></span>, <span class='object_link'><a href="Merge/FileAligner.html" title="Rbs::Merge::FileAligner (class)">FileAligner</a></span>, <span class='object_link'><a href="Merge/FileAnalysis.html" title="Rbs::Merge::FileAnalysis (class)">FileAnalysis</a></span>, <span class='object_link'><a href="Merge/FreezeNode.html" title="Rbs::Merge::FreezeNode (class)">FreezeNode</a></span>, <span class='object_link'><a href="Merge/MergeResult.html" title="Rbs::Merge::MergeResult (class)">MergeResult</a></span>, <span class='object_link'><a href="Merge/NodeWrapper.html" title="Rbs::Merge::NodeWrapper (class)">NodeWrapper</a></span>, <span class='object_link'><a href="Merge/ParseError.html" title="Rbs::Merge::ParseError (class)">ParseError</a></span>, <span class='object_link'><a href="Merge/SmartMerger.html" title="Rbs::Merge::SmartMerger (class)">SmartMerger</a></span>, <span class='object_link'><a href="Merge/TemplateParseError.html" title="Rbs::Merge::TemplateParseError (class)">TemplateParseError</a></span>
     
   
 </p>
@@ -105,6 +105,21 @@
     </h2>
 
     <dl class="constants">
+      
+        <dt id="BACKEND_REGISTRY-constant" class="">BACKEND_REGISTRY =
+          <div class="docstring">
+  <div class="discussion">
+    <p>Tracks whether backends were registered, without class instance variables.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div>
+        </dt>
+        <dd><pre class="code"><span class='const'>Struct</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:registered</span><span class='comma'>,</span> <span class='symbol'>:mutex</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='kw'>false</span><span class='comma'>,</span> <span class='const'>Mutex</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='rparen'>)</span></pre></dd>
       
         <dt id="VERSION-constant" class="">VERSION =
           <div class="docstring">
@@ -121,6 +136,21 @@
         </dt>
         <dd><pre class="code"><span class='const'><span class='object_link'><a href="Merge/Version.html" title="Rbs::Merge::Version (module)">Version</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Merge/Version.html#VERSION-constant" title="Rbs::Merge::Version::VERSION (constant)">VERSION</a></span></span></pre></dd>
       
+        <dt id="NodeTypingNormalizer-constant" class="">NodeTypingNormalizer =
+          <div class="docstring">
+  <div class="discussion">
+    <p>Alias for the shared normalizer module from ast-merge</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div>
+        </dt>
+        <dd><pre class="code"><span class='const'>Ast</span><span class='op'>::</span><span class='const'>Merge</span><span class='op'>::</span><span class='const'>NodeTyping</span><span class='op'>::</span><span class='const'>Normalizer</span></pre></dd>
+      
     </dl>
   
 
@@ -130,14 +160,153 @@
 
 
 
+  
+    <h2>
+      Class Method Summary
+      <small><a href="#" class="summary_toggle">collapse</a></small>
+    </h2>
 
+    <ul class="summary">
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#register_backend!-class_method" title="register_backend! (class method)">.<strong>register_backend!</strong>  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  <span class="private note title">private</span>
+
+  
+    <span class="summary_desc"><div class='inline'><p>Register the RBS backends with TreeHaver.</p>
+</div></span>
+  
+</li>
+
+      
+    </ul>
+  
+
+
+
+  <div id="class_method_details" class="method_details_list">
+    <h2>Class Method Details</h2>
+
+    
+      <div class="method_details first">
+  <h3 class="signature first" id="register_backend!-class_method">
+  
+    .<strong>register_backend!</strong>  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p class="note private">
+  <strong>This method is part of a private API.</strong>
+  You should avoid using this method if possible, as it may be removed or be changed in the future.
+</p>
+<p>Register the RBS backends with TreeHaver</p>
+
+<p>This registers both:</p>
+<ol>
+  <li>The RBS gem backend (Ruby-based, MRI only)</li>
+  <li>The tree-sitter-rbs grammar (if available, works on all platforms)</li>
+</ol>
+
+<p>This allows TreeHaver.parser_for(:rbs) to use whichever backend is<br />
+available, with the RBS gem preferred when available.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge.rb', line 103</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_register_backend!'>register_backend!</span>
+  <span class='const'><span class='object_link'><a href="#BACKEND_REGISTRY-constant" title="Rbs::Merge::BACKEND_REGISTRY (constant)">BACKEND_REGISTRY</a></span></span><span class='period'>.</span><span class='id identifier rubyid_mutex'>mutex</span><span class='period'>.</span><span class='id identifier rubyid_synchronize'>synchronize</span> <span class='kw'>do</span>
+    <span class='kw'>return</span> <span class='kw'>if</span> <span class='const'><span class='object_link'><a href="#BACKEND_REGISTRY-constant" title="Rbs::Merge::BACKEND_REGISTRY (constant)">BACKEND_REGISTRY</a></span></span><span class='period'>.</span><span class='id identifier rubyid_registered'>registered</span>
+
+    <span class='comment'># Register the RBS gem backend (for MRI Ruby)
+</span>    <span class='const'>TreeHaver</span><span class='period'>.</span><span class='id identifier rubyid_register_language'>register_language</span><span class='lparen'>(</span>
+      <span class='symbol'>:rbs</span><span class='comma'>,</span>
+      <span class='label'>backend_module:</span> <span class='const'><span class='object_link'><a href="Merge/Backends.html" title="Rbs::Merge::Backends (module)">Backends</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="Merge/Backends/RbsBackend.html" title="Rbs::Merge::Backends::RbsBackend (module)">RbsBackend</a></span></span><span class='comma'>,</span>
+      <span class='label'>backend_type:</span> <span class='symbol'>:rbs</span><span class='comma'>,</span>
+      <span class='label'>gem_name:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>rbs</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+    <span class='rparen'>)</span>
+
+    <span class='comment'># Also register tree-sitter-rbs grammar if available
+</span>    <span class='comment'># This enables tree-sitter backends (mri, ffi, rust, java) to parse RBS
+</span>    <span class='id identifier rubyid_grammar_finder'>grammar_finder</span> <span class='op'>=</span> <span class='const'>TreeHaver</span><span class='op'>::</span><span class='const'>GrammarFinder</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='symbol'>:rbs</span><span class='rparen'>)</span>
+    <span class='kw'>if</span> <span class='id identifier rubyid_grammar_finder'>grammar_finder</span><span class='period'>.</span><span class='id identifier rubyid_available?'>available?</span>
+      <span class='const'>TreeHaver</span><span class='period'>.</span><span class='id identifier rubyid_register_language'>register_language</span><span class='lparen'>(</span>
+        <span class='symbol'>:rbs</span><span class='comma'>,</span>
+        <span class='label'>path:</span> <span class='id identifier rubyid_grammar_finder'>grammar_finder</span><span class='period'>.</span><span class='id identifier rubyid_find_library_path'>find_library_path</span><span class='comma'>,</span>
+        <span class='label'>symbol:</span> <span class='id identifier rubyid_grammar_finder'>grammar_finder</span><span class='period'>.</span><span class='id identifier rubyid_symbol_name'>symbol_name</span><span class='comma'>,</span>
+      <span class='rparen'>)</span>
+    <span class='kw'>end</span>
+
+    <span class='const'><span class='object_link'><a href="#BACKEND_REGISTRY-constant" title="Rbs::Merge::BACKEND_REGISTRY (constant)">BACKEND_REGISTRY</a></span></span><span class='period'>.</span><span class='id identifier rubyid_registered'>registered</span> <span class='op'>=</span> <span class='kw'>true</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+  </div>
 
 </div>
 
       <div id="footer">
-  Generated on Fri Dec 12 18:05:25 2025 by
+  Generated on Thu Feb 19 06:01:56 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.38 (ruby-3.4.7).
+  0.9.38 (ruby-4.0.1).
 </div>
 
     </div>

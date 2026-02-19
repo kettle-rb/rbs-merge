@@ -154,6 +154,7 @@ module Rbs
           preference: @preference,
           template_analysis: @template_analysis,
           dest_analysis: @dest_analysis,
+          node_typing: @node_typing,
         )
       end
 

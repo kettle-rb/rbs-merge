@@ -48,20 +48,20 @@ module Rbs
           #     puts "RBS backend is ready"
           #   end
           def available?
-            return @loaded if @load_attempted
-            @load_attempted = true
+            return @loaded if @load_attempted # rubocop:disable ThreadSafety/ClassInstanceVariable
+            @load_attempted = true # rubocop:disable ThreadSafety/ClassInstanceVariable
             begin
               require "rbs"
               # Verify it can actually parse - just requiring isn't enough
               buffer = ::RBS::Buffer.new(name: "test.rbs", content: "class Foo end")
               ::RBS::Parser.parse_signature(buffer)
-              @loaded = true
+              @loaded = true # rubocop:disable ThreadSafety/ClassInstanceVariable
             rescue LoadError
-              @loaded = false
+              @loaded = false # rubocop:disable ThreadSafety/ClassInstanceVariable
             rescue StandardError
-              @loaded = false
+              @loaded = false # rubocop:disable ThreadSafety/ClassInstanceVariable
             end
-            @loaded
+            @loaded # rubocop:disable ThreadSafety/ClassInstanceVariable
           end
 
           # Reset the load state (primarily for testing)
@@ -69,8 +69,8 @@ module Rbs
           # @return [void]
           # @api private
           def reset!
-            @load_attempted = false
-            @loaded = false
+            @load_attempted = false # rubocop:disable ThreadSafety/ClassInstanceVariable
+            @loaded = false # rubocop:disable ThreadSafety/ClassInstanceVariable
           end
 
           # Get capabilities supported by this backend
@@ -102,28 +102,11 @@ module Rbs
         # @example
         #   language = Rbs::Merge::Backends::RbsBackend::Language.rbs
         #   parser.language = language
-        class Language
-          include Comparable
-
-          # The language name (always :rbs)
-          # @return [Symbol]
-          attr_reader :name
-          alias_method :language_name, :name
-
-          # The backend this language is for
-          # @return [Symbol]
-          attr_reader :backend
-
-          # Parsing options
-          # @return [Hash]
-          attr_reader :options
-
+        class Language < ::TreeHaver::Base::Language
           # @param name [Symbol] language name (should be :rbs)
           # @param options [Hash] parsing options (reserved for future use)
           def initialize(name = :rbs, options: {})
-            @name = name.to_sym
-            @backend = :rbs
-            @options = options
+            super(name, backend: :rbs, options: options)
 
             unless @name == :rbs
               raise TreeHaver::NotAvailable,
@@ -131,26 +114,6 @@ module Rbs
                   "Got language: #{name.inspect}"
             end
           end
-
-          # Compare languages for equality
-          #
-          # @param other [Object] object to compare with
-          # @return [Integer, nil] -1, 0, 1, or nil if not comparable
-          def <=>(other)
-            return unless other.is_a?(Language)
-            return unless other.backend == @backend
-
-            @options.to_a.sort <=> other.options.to_a.sort
-          end
-
-          # Hash value for this language (for use in Sets/Hashes)
-          # @return [Integer]
-          def hash
-            [@backend, @name, @options.to_a.sort].hash
-          end
-
-          # Alias eql? to ==
-          alias_method :eql?, :==
 
           class << self
             # Create an RBS language instance (convenience method)
@@ -176,12 +139,12 @@ module Rbs
             # @raise [TreeHaver::NotAvailable] if requested language is not RBS
             def from_library(_path = nil, symbol: nil, name: nil)
               # Derive language name from symbol if provided
-              lang_name = name || (symbol && symbol.to_s.sub(/^tree_sitter_/, ""))&.to_sym || :rbs
+              lang_name = name || symbol&.to_s&.sub(/^tree_sitter_/, "")&.to_sym || :rbs
 
               unless lang_name == :rbs
                 raise TreeHaver::NotAvailable,
                   "RBS backend only supports RBS, not #{lang_name}. " \
-                  "Use a tree-sitter backend for #{lang_name} support."
+                    "Use a tree-sitter backend for #{lang_name} support."
               end
 
               rbs
@@ -194,13 +157,13 @@ module Rbs
         # RBS parser wrapper
         #
         # Wraps the RBS gem parser to provide a TreeHaver-compatible API.
-        class Parser
+        class Parser < ::TreeHaver::Base::Parser
           # Create a new RBS parser instance
           #
           # @raise [TreeHaver::NotAvailable] if rbs gem is not available
           def initialize
+            super()
             raise TreeHaver::NotAvailable, "rbs gem not available" unless RbsBackend.available?
-            @language = nil
           end
 
           # Set the language for this parser
@@ -234,21 +197,10 @@ module Rbs
 
             buffer = ::RBS::Buffer.new(name: "merge.rbs", content: source)
             _buffer, directives, declarations = ::RBS::Parser.parse_signature(buffer)
-            Tree.new(declarations, directives, source)
+            Tree.new(declarations, source: source, directives: directives)
           rescue ::RBS::ParsingError => e
             # Return a tree with errors instead of raising
-            Tree.new([], [], source, errors: [e])
-          end
-
-          # Parse source code (compatibility with tree-sitter API)
-          #
-          # RBS doesn't support incremental parsing, so old_tree is ignored.
-          #
-          # @param old_tree [Tree, nil] ignored (no incremental parsing support)
-          # @param source [String] the RBS source code to parse
-          # @return [Tree] parse result tree
-          def parse_string(old_tree, source) # rubocop:disable Lint/UnusedMethodArgument
-            parse(source)
+            Tree.new([], source: source, directives: [], errors: [e])
           end
         end
 
@@ -257,23 +209,20 @@ module Rbs
         # Wraps RBS parse results to provide tree-sitter-compatible API.
         #
         # @api private
-        class Tree
+        class Tree < ::TreeHaver::Base::Tree
           # @return [Array<::RBS::AST::Declarations::Base>] the declarations
           attr_reader :declarations
 
           # @return [Array<::RBS::AST::Directives::Base>] the directives
           attr_reader :directives
 
-          # @return [String] the source code
-          attr_reader :source
-
           # @return [Array] parse errors
           attr_reader :errors
 
-          def initialize(declarations, directives, source, errors: [])
+          def initialize(declarations, source: nil, directives: [], errors: [])
+            super(declarations, source: source)
             @declarations = declarations
             @directives = directives
-            @source = source
             @errors = errors
           end
 
@@ -283,7 +232,7 @@ module Rbs
           #
           # @return [Node] wrapped root node
           def root_node
-            Node.new_root(@declarations, @source)
+            Node.new_root(@declarations, source: source, lines: lines)
           end
 
           # Check if the parse had errors
@@ -294,6 +243,7 @@ module Rbs
           end
 
           # Access the underlying declarations (passthrough)
+          # Overrides inner_tree to return declarations
           #
           # @return [Array<::RBS::AST::Declarations::Base>]
           def inner_tree
@@ -311,31 +261,25 @@ module Rbs
         # - Location information via .location
         #
         # @api private
-        class Node
-          include Enumerable
-
-          # @return [Object] the underlying RBS AST node
-          attr_reader :inner_node
-
-          # @return [String] the source code
-          attr_reader :source
-
+        class Node < ::TreeHaver::Base::Node
           # @return [Array<Object>] child nodes (for synthetic root)
           attr_reader :children_array
 
-          def initialize(node, source, children_array: nil)
-            @inner_node = node
-            @source = source
+          def initialize(node, source: nil, lines: nil, children_array: nil)
+            super(node, source: source, lines: lines)
             @children_array = children_array
           end
 
-          # Create a synthetic root node containing all declarations
-          #
-          # @param declarations [Array] the declarations
-          # @param source [String] the source code
-          # @return [Node] synthetic root node
-          def self.new_root(declarations, source)
-            new(nil, source, children_array: declarations)
+          class << self
+            # Create a synthetic root node containing all declarations
+            #
+            # @param declarations [Array] the declarations
+            # @param source [String] the source code
+            # @param lines [Array<String>] pre-split source lines
+            # @return [Node] synthetic root node
+            def new_root(declarations, source: nil, lines: nil)
+              new(nil, source: source, lines: lines, children_array: declarations)
+            end
           end
 
           # Get node type from RBS class name
@@ -345,7 +289,7 @@ module Rbs
           #
           # @return [String] node type
           def type
-            return "program" if @inner_node.nil? && @children_array
+            return "program" if root_node?
 
             return "unknown" if @inner_node.nil?
 
@@ -396,7 +340,8 @@ module Rbs
           #
           # @return [Integer]
           def end_byte
-            return @source.bytesize if root_node?
+            return source.bytesize if root_node? && source
+            return 0 if root_node?
             return 0 unless @inner_node.respond_to?(:location) && @inner_node.location
 
             @inner_node.location.end_pos
@@ -417,12 +362,12 @@ module Rbs
           #
           # @return [Hash{Symbol => Integer}] with :row and :column keys
           def end_point
-            lines = @source.lines
-            if root_node?
+            if root_node? && source
               last_line = lines.size - 1
               last_col = lines.last&.size || 0
               return {row: last_line, column: last_col}
             end
+            return {row: 0, column: 0} if root_node?
             return {row: 0, column: 0} unless @inner_node.respond_to?(:location) && @inner_node.location
 
             loc = @inner_node.location
@@ -443,7 +388,8 @@ module Rbs
           #
           # @return [Integer] 1-based line number
           def end_line
-            return @source.lines.size if root_node?
+            return lines.size if root_node? && lines.any?
+            return 1 if root_node?
             return 1 unless @inner_node.respond_to?(:location) && @inner_node.location
 
             @inner_node.location.end_line
@@ -468,50 +414,15 @@ module Rbs
             @inner_node.nil? && @children_array
           end
 
-          # Get the first child node
-          #
-          # @return [Node, nil] First child or nil
-          def first_child
-            child(0)
-          end
-
           # Get the text content of this node
           #
           # @return [String]
           def text
-            return @source if root_node?
+            return source.to_s if root_node?
             return "" unless @inner_node.respond_to?(:location) && @inner_node.location
 
             loc = @inner_node.location
-            @source[loc.start_pos...loc.end_pos] || ""
-          end
-
-          # Get the number of child nodes
-          #
-          # @return [Integer]
-          def child_count
-            return @children_array.size if root_node?
-            return 0 unless @inner_node.respond_to?(:members)
-
-            @inner_node.members.size
-          end
-
-          # Get a child node by index
-          #
-          # @param index [Integer] child index
-          # @return [Node, nil] wrapped child node
-          def child(index)
-            if root_node?
-              return if index >= @children_array.size
-              return Node.new(@children_array[index], @source)
-            end
-
-            return unless @inner_node.respond_to?(:members)
-
-            members = @inner_node.members
-            return if index >= members.size
-
-            Node.new(members[index], @source)
+            source[loc.start_pos...loc.end_pos] || ""
           end
 
           # Get all child nodes
@@ -519,49 +430,12 @@ module Rbs
           # @return [Array<Node>] array of wrapped child nodes
           def children
             if root_node?
-              return @children_array.map { |n| Node.new(n, @source) }
+              return @children_array.map { |n| Node.new(n, source: source, lines: lines) }
             end
 
             return [] unless @inner_node.respond_to?(:members)
 
-            @inner_node.members.map { |n| Node.new(n, @source) }
-          end
-
-          # Iterate over child nodes
-          #
-          # @yield [Node] each child node
-          # @return [Enumerator, nil]
-          def each(&block)
-            return to_enum(__method__) unless block_given?
-            children.each(&block)
-          end
-
-          # Check if this node has errors
-          #
-          # @return [Boolean]
-          def has_error?
-            false # RBS parser raises instead of creating error nodes
-          end
-
-          # Check if this node is a "missing" node (error recovery)
-          #
-          # @return [Boolean]
-          def missing?
-            false # RBS parser doesn't have missing nodes
-          end
-
-          # Check if this is a "named" node (structural vs punctuation)
-          #
-          # @return [Boolean]
-          def named?
-            true # All RBS AST nodes are "named" in tree-sitter terminology
-          end
-
-          # Check if this is a structural node
-          #
-          # @return [Boolean]
-          def structural?
-            true
+            @inner_node.members.map { |n| Node.new(n, source: source, lines: lines) }
           end
 
           # Get a child by field name (RBS node accessor)
@@ -580,42 +454,18 @@ module Rbs
 
             # Wrap if it's a node, otherwise return nil
             if result.respond_to?(:location)
-              Node.new(result, @source)
+              Node.new(result, source: source, lines: lines)
             end
           end
 
           alias_method :field, :child_by_field_name
 
-          # Get the parent node
-          #
-          # @raise [NotImplementedError] RBS nodes don't have parent references
-          # @return [void]
-          def parent
-            raise NotImplementedError, "RBS backend does not support parent navigation"
-          end
-
-          # Get next sibling
-          #
-          # @raise [NotImplementedError] RBS nodes don't have sibling references
-          # @return [void]
-          def next_sibling
-            raise NotImplementedError, "RBS backend does not support sibling navigation"
-          end
-
-          # Get previous sibling
-          #
-          # @raise [NotImplementedError] RBS nodes don't have sibling references
-          # @return [void]
-          def prev_sibling
-            raise NotImplementedError, "RBS backend does not support sibling navigation"
-          end
-
           # Get the name of this declaration/member
           #
           # @return [String, nil]
           def name
-            return nil if @inner_node.nil?
-            return nil unless @inner_node.respond_to?(:name)
+            return if @inner_node.nil?
+            return unless @inner_node.respond_to?(:name)
 
             n = @inner_node.name
             n.respond_to?(:to_s) ? n.to_s : n
@@ -660,8 +510,22 @@ module Rbs
             end
           end
         end
+
+        # Register this backend with TreeHaver
+        ::TreeHaver.register_language(
+          :rbs,
+          backend_type: :rbs,
+          backend_module: self,
+          gem_name: "rbs",
+        )
+
+        # Register the availability checker for RSpec dependency tags
+        TreeHaver::BackendRegistry.register_tag(
+          :rbs_gem,
+          category: :gem,
+          require_path: "rbs",
+        ) { available? }
       end
     end
   end
 end
-

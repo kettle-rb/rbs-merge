@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "spec_helper"
 require "ast/merge/rspec/shared_examples"
 
 # ConflictResolver specs - works with any RBS parser backend
@@ -168,6 +169,48 @@ RSpec.describe Rbs::Merge::ConflictResolver, :rbs_parsing do
         expect(result[:source]).to eq(:destination)
         expect(result[:declaration]).to eq(dest_decl)
         expect(result[:decision]).to eq(Rbs::Merge::MergeResult::DECISION_DESTINATION)
+      end
+    end
+
+    context "when preference is per-node-type" do
+      let(:template_type_alias) { "type my_type = String\n" }
+      let(:dest_type_alias) { "type my_type = Integer\n" }
+      let(:template_analysis_alias) { Rbs::Merge::FileAnalysis.new(template_type_alias) }
+      let(:dest_analysis_alias) { Rbs::Merge::FileAnalysis.new(dest_type_alias) }
+
+      it "returns template declaration for typed nodes" do
+        node_typing = {
+          "TypeAlias" => lambda { |node|
+            Ast::Merge::NodeTyping.with_merge_type(node, :alias_type)
+          },
+          "TreeHaver::Node" => lambda { |node|
+            canonical = if node.respond_to?(:type)
+              Rbs::Merge::NodeTypeNormalizer.canonical_type(node.type, :tree_sitter)
+            end
+
+            if canonical == :type_alias
+              Ast::Merge::NodeTyping.with_merge_type(node, :alias_type)
+            else
+              node
+            end
+          },
+        }
+
+        resolver = described_class.new(
+          preference: {default: :destination, alias_type: :template},
+          template_analysis: template_analysis_alias,
+          dest_analysis: dest_analysis_alias,
+          node_typing: node_typing,
+        )
+
+        template_decl = template_analysis_alias.declarations.first
+        dest_decl = dest_analysis_alias.declarations.first
+
+        result = resolver.resolve(template_decl, dest_decl, template_index: 0, dest_index: 0)
+
+        expect(result[:source]).to eq(:template)
+        expect(result[:declaration]).to eq(template_decl)
+        expect(result[:decision]).to eq(Rbs::Merge::MergeResult::DECISION_TEMPLATE)
       end
     end
 

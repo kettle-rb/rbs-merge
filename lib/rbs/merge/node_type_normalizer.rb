@@ -288,4 +288,3 @@ module Rbs
     end
   end
 end
-

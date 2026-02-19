@@ -65,6 +65,22 @@ def path_matches_filter?(path, short_path, filter)
   end
 end
 
+# Parse a branch/condition key without eval (best-effort JSON-style parsing)
+def parse_branch_key(raw)
+  return unless raw.is_a?(String)
+
+  candidate = raw.strip
+  return unless candidate.start_with?("[") && candidate.end_with?("]")
+
+  json_candidate = candidate
+    .gsub(/:(\w+)/, '"\1"')
+    .gsub("nil", "null")
+
+  JSON.parse(json_candidate)
+rescue JSON::ParserError
+  nil
+end
+
 # Fail early if JSON formatter is not active; coverage.json may be stale or missing
 unless explicit_coverage_path || Kettle::Soup::Cover::FORMATTERS.any? { |f| f[:type] == :json }
   abort <<~MSG
@@ -137,7 +153,7 @@ def collect_line_info(files, file_filter: nil)
     next if uncovered == 0
 
     pct = (total > 0) ? (covered.to_f / total * 100).round(1) : 100.0
-    short_path = path.split("/lib/").last || path.split("/lib/").last || path.split("/").last(2).join("/")
+    short_path = path.split("/lib/").last || path.split("/").last(2).join("/")
 
     results << {
       uncovered: uncovered,
@@ -178,16 +194,8 @@ def collect_branch_info(files, file_filter: nil)
             covered += 1
           else
             begin
-              cond_info = begin
-                eval(condition_key)
-              rescue StandardError
-                nil
-              end
-              branch_info = begin
-                eval(branch_id)
-              rescue StandardError
-                nil
-              end
+              cond_info = parse_branch_key(condition_key)
+              branch_info = parse_branch_key(branch_id)
               if cond_info && branch_info
                 cond_type = cond_info[0]
                 cond_line = cond_info[2]
@@ -316,7 +324,7 @@ if @show_lines
   if line_results.empty?
     puts "All files fully covered (lines)!"
   else
-    puts "Files with uncovered (-d to expand) lines (-n=#{max_details}; use n=0 for unlimited):"
+    puts "Files with uncovered (-d to expand) lines (-n #{max_details}; use n 0 for unlimited):"
     puts "-" * 70
     line_results.each do |r|
       puts format("%3d uncovered | %5.1f%% | %s", r[:uncovered], r[:pct], r[:path])
@@ -356,7 +364,7 @@ if @show_branches
   if branch_results.empty?
     puts "All files fully covered (branches)!"
   else
-    puts "Files with uncovered (-d to expand) branches (-n=#{max_details}; use n=0 for unlimited):"
+    puts "Files with uncovered (-d to expand) branches (-n #{max_details}; use n 0 for unlimited):"
     puts "-" * 70
     branch_results.each do |r|
       puts format("%3d uncovered | %5.1f%% | %s", r[:uncovered], r[:pct], r[:path])

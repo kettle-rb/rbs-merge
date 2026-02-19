@@ -86,28 +86,64 @@ module Rbs
       autoload :RbsBackend, "rbs/merge/backends/rbs_backend"
     end
 
-    # Register the RBS backend with TreeHaver
-    #
-    # This allows TreeHaver.parser_for(:rbs) to use the RBS gem backend
-    # when available, providing a consistent API across all parsing backends.
-    #
-    # @api private
-    def self.register_backend!
-      return if @backend_registered
+    # Tracks whether backends were registered, without class instance variables.
+    BACKEND_REGISTRY = Struct.new(:registered, :mutex).new(false, Mutex.new)
 
-      TreeHaver.register_language(
-        :rbs,
-        backend_module: Backends::RbsBackend,
-        backend_type: :rbs,
-        gem_name: "rbs"
-      )
-      @backend_registered = true
+    class << self
+      # Register the RBS backends with TreeHaver
+      #
+      # This registers both:
+      # 1. The RBS gem backend (Ruby-based, MRI only)
+      # 2. The tree-sitter-rbs grammar (if available, works on all platforms)
+      #
+      # This allows TreeHaver.parser_for(:rbs) to use whichever backend is
+      # available, with the RBS gem preferred when available.
+      #
+      # @api private
+      def register_backend!
+        BACKEND_REGISTRY.mutex.synchronize do
+          return if BACKEND_REGISTRY.registered
+
+          # Register the RBS gem backend (for MRI Ruby)
+          TreeHaver.register_language(
+            :rbs,
+            backend_module: Backends::RbsBackend,
+            backend_type: :rbs,
+            gem_name: "rbs",
+          )
+
+          # Also register tree-sitter-rbs grammar if available
+          # This enables tree-sitter backends (mri, ffi, rust, java) to parse RBS
+          grammar_finder = TreeHaver::GrammarFinder.new(:rbs)
+          if grammar_finder.available?
+            TreeHaver.register_language(
+              :rbs,
+              path: grammar_finder.find_library_path,
+              symbol: grammar_finder.symbol_name,
+            )
+          end
+
+          BACKEND_REGISTRY.registered = true
+        end
+      end
     end
   end
 end
 
 # Register the RBS backend with TreeHaver when this gem is loaded
 Rbs::Merge.register_backend!
+
+# Register with ast-merge's MergeGemRegistry for RSpec dependency tags
+# Only register if MergeGemRegistry is loaded (i.e., in test environment)
+if defined?(Ast::Merge::RSpec::MergeGemRegistry)
+  Ast::Merge::RSpec::MergeGemRegistry.register(
+    :rbs_merge,
+    require_path: "rbs/merge",
+    merger_class: "Rbs::Merge::SmartMerger",
+    test_source: "class Foo\nend",
+    category: :code,
+  )
+end
 
 Rbs::Merge::Version.class_eval do
   extend VersionGem::Basic

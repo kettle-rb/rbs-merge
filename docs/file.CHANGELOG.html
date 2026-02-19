@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  File: CHANGELOG
+  
+    &mdash; Documentation by YARD 0.9.38
+  
+</title>
+
+  <link rel="stylesheet" href="css/style.css" type="text/css" />
+
+  <link rel="stylesheet" href="css/common.css" type="text/css" />
+
+<script type="text/javascript">
+  pathId = "CHANGELOG";
+  relpath = '';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div class="nav_wrap">
+      <iframe id="nav" src="file_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="_index.html">Index</a> &raquo; 
+    <span class="title">File: CHANGELOG</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><div id='filecontents'><h1 id="changelog">Changelog</h1>
+
+<p><a href="https://semver.org/spec/v2.0.0.html"><img src="https://img.shields.io/badge/semver-2.0.0-FFDD67.svg?style=flat" alt="SemVer 2.0.0"></a> <a href="https://keepachangelog.com/en/1.0.0/"><img src="https://img.shields.io/badge/keep--a--changelog-1.0.0-FFDD67.svg?style=flat" alt="Keep-A-Changelog 1.0.0"></a></p>
+
+<p>All notable changes to this project will be documented in this file.</p>
+
+<p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,<br>
+and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>,<br>
+and <a href="https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html">yes</a>, platform and engine support are part of the <a href="https://github.com/semver/semver/issues/716#issuecomment-869336139">public API</a>.<br>
+Please file a bug if you notice a violation of semantic versioning.</p>
+
+<h2 id="unreleased"><a href="https://github.com/kettle-rb/rbs-merge/compare/v1.0.0...HEAD">Unreleased</a></h2>
+
+<h3 id="added">Added</h3>
+
+<ul>
+  <li>AGENTS.md</li>
+  <li>
+<strong>Dependency Tags Support</strong>: Added <code>spec/support/dependency_tags.rb</code> to load shared<br>
+dependency tags from tree_haver and ast-merge. This enables automatic exclusion of<br>
+tests when required backends or dependencies are not available.
+    <ul>
+      <li>Tests tagged with <code>:ffi_backend</code>, <code>:java_backend</code>, <code>:rust_backend</code> are now properly<br>
+excluded when those backends aren’t available</li>
+      <li>Tests tagged with <code>:rbs_grammar</code> are excluded when tree-sitter-rbs isn’t available</li>
+      <li>Tests tagged with <code>:rbs_parsing</code> work with any available RBS parsing backend</li>
+    </ul>
+  </li>
+  <li>FFI backend isolation for test suite
+    <ul>
+      <li>Added <code>bin/rspec-ffi</code> script to run FFI specs in isolation (before MRI backend loads)</li>
+      <li>Added <code>spec/spec_ffi_helper.rb</code> for FFI-specific test configuration</li>
+      <li>Updated Rakefile with <code>ffi_specs</code> and <code>remaining_specs</code> tasks</li>
+      <li>The <code>:test</code> task now runs FFI specs first, then remaining specs</li>
+    </ul>
+  </li>
+  <li>
+<strong>BackendRegistry Integration</strong>: RbsBackend now registers its availability checker with <code>TreeHaver::BackendRegistry</code>
+    <ul>
+      <li>Enables <code>TreeHaver::RSpec::DependencyTags</code> to detect RBS backend availability without hardcoded checks</li>
+      <li>Called automatically when backend is loaded: <code>TreeHaver::BackendRegistry.register_availability_checker(:rbs)</code>
+</li>
+    </ul>
+  </li>
+  <li>
+<strong>TreeHaver backend integration</strong> - rbs-merge now uses TreeHaver for all parsing,<br>
+enabling cross-platform RBS parsing:
+    <ul>
+      <li>
+<strong><code>Rbs::Merge::Backends::RbsBackend</code></strong> - New TreeHaver-compatible backend module<br>
+that wraps the RBS gem. Registered with TreeHaver via <code>register_language(:rbs, ...)</code>.</li>
+      <li>On MRI: Uses RBS gem backend (richer AST, comment association)</li>
+      <li>On JRuby: Uses tree-sitter-rbs via TreeHaver’s Java backend</li>
+      <li>Backend selection respects <code>TreeHaver.with_backend()</code> and <code>TREE_HAVER_BACKEND</code> env var</li>
+    </ul>
+  </li>
+  <li>
+<strong><code>NodeWrapper#comment</code></strong> - Delegates to underlying RBS gem node’s comment for<br>
+leading comment association (RBS gem backend only)</li>
+  <li>
+<strong><code>FileAnalysis#compute_tree_sitter_signature</code></strong> - Generates signatures for raw<br>
+TreeHaver::Node objects from tree-sitter backend</li>
+  <li>
+<strong><code>FileAnalysis#extract_tree_sitter_node_name</code></strong> - Extracts declaration names from<br>
+tree-sitter nodes by traversing child nodes</li>
+  <li>
+<code>node_typing</code> parameter for per-node-type merge preferences
+    <ul>
+      <li>Enables <code>preference: { default: :destination, special_type: :template }</code> pattern</li>
+      <li>Works with custom merge_types assigned via node_typing lambdas</li>
+    </ul>
+  </li>
+  <li>
+<code>match_refiner</code> parameter for fuzzy matching support</li>
+  <li>
+<code>regions</code> and <code>region_placeholder</code> parameters for nested content merging</li>
+</ul>
+
+<h3 id="changed">Changed</h3>
+
+<ul>
+  <li>appraisal2 v3.0.6</li>
+  <li>kettle-test v1.0.10</li>
+  <li>stone_checksums v1.0.3</li>
+  <li><a href="https://github.com/kettle-rb/ast-merge/releases/tag/v4.0.6">ast-merge v4.0.6</a></li>
+  <li><a href="https://github.com/kettle-rb/tree_haver/releases/tag/v5.0.5">tree_haver v5.0.5</a></li>
+  <li>tree_stump v0.2.0
+    <ul>
+      <li>fork no longer required, updates all applied upstream</li>
+    </ul>
+  </li>
+  <li>Updated documentation on hostile takeover of RubyGems
+    <ul>
+      <li>https://dev.to/galtzo/hostile-takeover-of-rubygems-my-thoughts-5hlo</li>
+    </ul>
+  </li>
+  <li>
+<strong>RbsBackend refactored to use TreeHaver::Base classes</strong>
+    <ul>
+      <li>
+<code>RbsBackend::Language</code> now inherits from <code>TreeHaver::Base::Language</code>
+</li>
+      <li>
+<code>RbsBackend::Parser</code> now inherits from <code>TreeHaver::Base::Parser</code>
+</li>
+      <li>
+<code>RbsBackend::Tree</code> now inherits from <code>TreeHaver::Base::Tree</code>
+</li>
+      <li>
+<code>RbsBackend::Node</code> now inherits from <code>TreeHaver::Base::Node</code>
+</li>
+      <li>Consistent API across all merge gem backends</li>
+    </ul>
+  </li>
+  <li>
+<strong>Tree-sitter grammar registration</strong> - <code>register_backend!</code> now registers both:
+    <ul>
+      <li>The RBS gem backend (Ruby-based parser, MRI only)</li>
+      <li>The tree-sitter-rbs grammar path (for native tree-sitter backends)</li>
+      <li>This enables <code>TreeHaver.parser_for(:rbs)</code> to use tree-sitter when available</li>
+    </ul>
+  </li>
+  <li>
+<strong>FileAnalysis now uses TreeHaver exclusively</strong> - Removed separate backend selection<br>
+logic. <code>parse_rbs</code> now calls <code>TreeHaver.parser_for(:rbs)</code> which handles all backend<br>
+selection automatically.</li>
+  <li>
+<strong><code>node_start_line</code>/<code>node_end_line</code> helpers</strong> - Now check for <code>start_line</code>/<code>end_line</code><br>
+methods first (TreeHaver::Node has these), falling back to <code>location</code> or <code>start_point</code>.</li>
+  <li>
+<strong><code>ConflictResolver#declarations_identical?</code></strong> - Now compares text content instead of<br>
+relying on object equality, enabling cross-backend comparison.</li>
+  <li>
+<strong><code>ConflictResolver#canonical_type</code></strong> - Now handles TreeHaver::Node objects in addition<br>
+to NodeWrapper and RBS gem nodes.</li>
+  <li>
+<strong><code>ConflictResolver#has_members?</code></strong> - Now checks for <code>members</code> child nodes in<br>
+TreeHaver::Node objects for tree-sitter backend support.</li>
+  <li>
+<strong><code>ConflictResolver#resolve</code></strong> - Now checks for template freeze blocks first, ensuring<br>
+frozen content from templates is preserved during merge.</li>
+  <li>
+<strong><code>FileAligner#build_signature_map</code></strong> - FreezeNodes are now indexed by both their own<br>
+signature AND the signatures of their contained nodes. This allows freeze blocks to<br>
+match against the non-frozen version of the same declaration in the other file.</li>
+  <li>
+<strong><code>MergeResult#add_freeze_block</code></strong> - Now uses the freeze_node’s own analysis for line<br>
+extraction, ensuring template freeze blocks use template lines (not destination lines).</li>
+  <li>
+<strong><code>SmartMerger#process_match</code></strong> - Now handles template FreezeNodes correctly, adding<br>
+them via <code>add_freeze_block</code> when the template side wins.</li>
+  <li>
+<strong><code>SmartMerger#process_template_only</code></strong> - FreezeNodes from template are now always<br>
+added (they represent protected content that must be preserved).</li>
+  <li>
+<strong>SmartMerger</strong>: Added <code>**options</code> for forward compatibility
+    <ul>
+      <li>Accepts additional options that may be added to base class in future</li>
+      <li>Passes all options through to <code>SmartMergerBase</code>
+</li>
+    </ul>
+  </li>
+  <li>
+<strong>ConflictResolver</strong>: Added <code>**options</code> for forward compatibility</li>
+  <li>
+<strong>MergeResult</strong>: Added <code>**options</code> for forward compatibility</li>
+  <li>
+<strong>BREAKING</strong>: <code>SmartMerger</code> now inherits from <code>Ast::Merge::SmartMergerBase</code>
+    <ul>
+      <li>Provides standardized options API consistent with all other <code>*-merge</code> gems</li>
+      <li>Gains automatic support for new SmartMergerBase features</li>
+      <li>
+<code>max_recursion_depth</code> parameter is still supported</li>
+      <li>
+<code>preference</code> now accepts Hash for per-type preferences</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="deprecated">Deprecated</h3>
+
+<h3 id="removed">Removed</h3>
+
+<ul>
+  <li>
+<strong><code>FileAnalysis#rbs_gem_available?</code></strong> - Removed; TreeHaver handles backend availability</li>
+  <li>
+<strong><code>FileAnalysis#parse_with_rbs_gem</code></strong> - Removed; replaced by <code>process_rbs_gem_result</code>
+</li>
+  <li>
+<strong><code>FileAnalysis#parse_with_tree_sitter</code></strong> - Removed; replaced by <code>process_tree_sitter_result</code>
+</li>
+  <li>
+<strong><code>backend:</code> parameter from <code>FileAnalysis#initialize</code></strong> - Removed; use<br>
+<code>TreeHaver.with_backend()</code> to control backend selection</li>
+</ul>
+
+<h3 id="fixed">Fixed</h3>
+
+<ul>
+  <li>ConflictResolver now applies Hash-based per-node-type preferences via <code>node_typing</code>.</li>
+  <li>
+<strong>Freeze blocks from template now preserved correctly</strong> - Previously, freeze blocks<br>
+from the template would not match destination declarations because their signatures<br>
+differed. Now FreezeNodes are indexed by contained node signatures.</li>
+  <li>
+<strong>FreezeNode name extraction</strong> - <code>extract_node_name</code> now handles TreeHaver::Node<br>
+objects and extracts meaningful names for error messages.</li>
+  <li>
+<strong><code>FreezeNode#get_start_line</code>/<code>get_end_line</code></strong> - Now properly handle nodes with<br>
+direct <code>start_line</code>/<code>end_line</code> methods (TreeHaver::Node).</li>
+  <li>
+<strong><code>SmartMerger#get_start_line</code>/<code>get_end_line</code></strong> - Added helper methods to support<br>
+both NodeWrapper and RBS gem nodes in <code>reconstruct_declaration_with_merged_members</code>.</li>
+</ul>
+
+<h3 id="security">Security</h3>
+
+<h2 id="100---2025-12-12">
+<a href="https://github.com/kettle-rb/rbs-merge/compare/7ae936a6ae844aee513264eecc39215eed53c313...v1.0.0">1.0.0</a> - 2025-12-12</h2>
+
+<ul>
+  <li>TAG: <a href="https://github.com/kettle-rb/rbs-merge/tags/v1.0.0">v1.0.0</a>
+</li>
+  <li>COVERAGE: 98.56% – 343/348 lines in 9 files</li>
+  <li>BRANCH COVERAGE: 87.50% – 98/112 branches in 9 files</li>
+  <li>96.61% documented</li>
+</ul>
+
+<h3 id="added-1">Added</h3>
+
+<ul>
+  <li>Initial release</li>
+</ul>
+
+</div></div>
+
+      <div id="footer">
+  Generated on Thu Feb 19 06:01:56 2026 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.38 (ruby-4.0.1).
+</div>
+
+    </div>
+  </body>
+</html>

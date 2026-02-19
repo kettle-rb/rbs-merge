@@ -20,6 +20,22 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- AGENTS.md
+- **Dependency Tags Support**: Added `spec/support/dependency_tags.rb` to load shared
+  dependency tags from tree_haver and ast-merge. This enables automatic exclusion of
+  tests when required backends or dependencies are not available.
+  - Tests tagged with `:ffi_backend`, `:java_backend`, `:rust_backend` are now properly
+    excluded when those backends aren't available
+  - Tests tagged with `:rbs_grammar` are excluded when tree-sitter-rbs isn't available
+  - Tests tagged with `:rbs_parsing` work with any available RBS parsing backend
+- FFI backend isolation for test suite
+  - Added `bin/rspec-ffi` script to run FFI specs in isolation (before MRI backend loads)
+  - Added `spec/spec_ffi_helper.rb` for FFI-specific test configuration
+  - Updated Rakefile with `ffi_specs` and `remaining_specs` tasks
+  - The `:test` task now runs FFI specs first, then remaining specs
+- **BackendRegistry Integration**: RbsBackend now registers its availability checker with `TreeHaver::BackendRegistry`
+  - Enables `TreeHaver::RSpec::DependencyTags` to detect RBS backend availability without hardcoded checks
+  - Called automatically when backend is loaded: `TreeHaver::BackendRegistry.register_availability_checker(:rbs)`
 - **TreeHaver backend integration** - rbs-merge now uses TreeHaver for all parsing,
   enabling cross-platform RBS parsing:
   - **`Rbs::Merge::Backends::RbsBackend`** - New TreeHaver-compatible backend module
@@ -41,6 +57,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- appraisal2 v3.0.6
+- kettle-test v1.0.10
+- stone_checksums v1.0.3
+- [ast-merge v4.0.6](https://github.com/kettle-rb/ast-merge/releases/tag/v4.0.6)
+- [tree_haver v5.0.5](https://github.com/kettle-rb/tree_haver/releases/tag/v5.0.5)
+- tree_stump v0.2.0
+  - fork no longer required, updates all applied upstream
+- Updated documentation on hostile takeover of RubyGems
+  - https://dev.to/galtzo/hostile-takeover-of-rubygems-my-thoughts-5hlo
+- **RbsBackend refactored to use TreeHaver::Base classes**
+  - `RbsBackend::Language` now inherits from `TreeHaver::Base::Language`
+  - `RbsBackend::Parser` now inherits from `TreeHaver::Base::Parser`
+  - `RbsBackend::Tree` now inherits from `TreeHaver::Base::Tree`
+  - `RbsBackend::Node` now inherits from `TreeHaver::Base::Node`
+  - Consistent API across all merge gem backends
+- **Tree-sitter grammar registration** - `register_backend!` now registers both:
+  - The RBS gem backend (Ruby-based parser, MRI only)
+  - The tree-sitter-rbs grammar path (for native tree-sitter backends)
+  - This enables `TreeHaver.parser_for(:rbs)` to use tree-sitter when available
 - **FileAnalysis now uses TreeHaver exclusively** - Removed separate backend selection
   logic. `parse_rbs` now calls `TreeHaver.parser_for(:rbs)` which handles all backend
   selection automatically.
@@ -73,8 +108,6 @@ Please file a bug if you notice a violation of semantic versioning.
   - Gains automatic support for new SmartMergerBase features
   - `max_recursion_depth` parameter is still supported
   - `preference` now accepts Hash for per-type preferences
-- Updated documentation on hostile takeover of RubyGems
-  - https://dev.to/galtzo/hostile-takeover-of-rubygems-my-thoughts-5hlo
 
 ### Deprecated
 
@@ -88,6 +121,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- ConflictResolver now applies Hash-based per-node-type preferences via `node_typing`.
 - **Freeze blocks from template now preserved correctly** - Previously, freeze blocks
   from the template would not match destination declarations because their signatures
   differed. Now FreezeNodes are indexed by contained node signatures.

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "spec_helper"
+
 # SmartMerger specs with explicit backend testing
 #
 # This spec file tests SmartMerger behavior across both available backends:
@@ -298,7 +300,7 @@ RSpec.describe Rbs::Merge::SmartMerger do
   # Explicit Rust backend tests
   # ============================================================
 
-  context "with explicit Rust backend", :rust_backend, :rbs_grammar do
+  context "with explicit Rust backend", :rbs_grammar, :rust_backend do
     around do |example|
       TreeHaver.with_backend(:rust) do
         example.run

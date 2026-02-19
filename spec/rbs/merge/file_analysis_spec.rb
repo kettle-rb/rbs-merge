@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "spec_helper"
+
 # FileAnalysis specs with explicit backend testing
 #
 # This spec file tests FileAnalysis behavior across both available backends:
@@ -392,7 +394,7 @@ RSpec.describe Rbs::Merge::FileAnalysis do
   # Explicit Rust backend tests (tree-sitter via rust bindings)
   # ============================================================
 
-  context "with explicit Rust backend", :rust_backend, :rbs_grammar do
+  context "with explicit Rust backend", :rbs_grammar, :rust_backend do
     around do |example|
       TreeHaver.with_backend(:rust) do
         example.run

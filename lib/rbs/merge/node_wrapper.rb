@@ -97,8 +97,8 @@ module Rbs
       # RBS gem associates comments with declarations via the `comment` attribute
       # @return [Object, nil] The comment object or nil
       def comment
-        return nil unless @backend == :rbs
-        return nil unless @node.respond_to?(:comment)
+        return unless @backend == :rbs
+        return unless @node.respond_to?(:comment)
 
         @node.comment
       end
@@ -254,7 +254,7 @@ module Rbs
       # Get source text for this node
       # @return [String, nil]
       def text
-        return nil unless start_line && end_line
+        return unless start_line && end_line
 
         if @lines && start_line > 0 && end_line <= @lines.length
           @lines[(start_line - 1)..(end_line - 1)].join("\n")
@@ -322,7 +322,7 @@ module Rbs
       # Get method kind (instance, singleton, singleton_instance)
       # @return [Symbol, nil]
       def method_kind
-        return nil unless method?
+        return unless method?
 
         if @backend == :rbs
           @node.respond_to?(:kind) ? @node.kind : :instance
@@ -340,7 +340,7 @@ module Rbs
       # Get alias new name
       # @return [String, nil]
       def alias_new_name
-        return nil unless alias?
+        return unless alias?
 
         if @backend == :rbs
           @node.respond_to?(:new_name) ? @node.new_name.to_s : nil
@@ -353,7 +353,7 @@ module Rbs
       # Get alias old name
       # @return [String, nil]
       def alias_old_name
-        return nil unless alias?
+        return unless alias?
 
         if @backend == :rbs
           @node.respond_to?(:old_name) ? @node.old_name.to_s : nil
@@ -372,8 +372,6 @@ module Rbs
           @node.name.to_s
         elsif @node.respond_to?(:new_name)
           @node.new_name.to_s
-        else
-          nil
         end
       end
 
@@ -382,8 +380,15 @@ module Rbs
       def extract_tree_sitter_name
         # Look for name-related children based on actual tree-sitter-rbs grammar
         # class_decl has class_name, module_decl has module_name, etc.
-        name_node_types = %w[class_name module_name interface_name const_name
-                             global_name alias_name method_name]
+        name_node_types = %w[
+          class_name
+          module_name
+          interface_name
+          const_name
+          global_name
+          alias_name
+          method_name
+        ]
 
         @node.each do |child|
           child_type = child.type.to_s
@@ -449,4 +454,3 @@ module Rbs
     end
   end
 end
-

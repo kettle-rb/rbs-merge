@@ -56,6 +56,73 @@ end
 # External gems that define tasks - add here!
 require "kettle/dev"
 
+### SPEC TASKS
+# Run FFI specs first (before the collision of MRI+FFI backends pollutes the environment),
+# then run remaining specs. This ensures FFI tests get a clean environment
+# while still validating that BackendConflict protection works.
+#
+# For coverage aggregation with SimpleCov merging:
+# - Each task uses a unique K_SOUP_COV_COMMAND_NAME so SimpleCov tracks them separately
+# - K_SOUP_COV_USE_MERGING=true must be set in .envrc for results to merge
+# - K_SOUP_COV_MERGE_TIMEOUT should be set long enough for all tasks to complete
+begin
+  require "rspec/core/rake_task"
+
+  # FFI specs run first in a clean environment
+  # Uses :ffi_backend tag - same pattern as other backends
+  desc("Run FFI backend specs first (before MRI loads)")
+  RSpec::Core::RakeTask.new(:ffi_specs) do |t|
+    t.pattern = "./spec/**/*_spec.rb"
+    t.rspec_opts = "--tag ffi_backend"
+  end
+  # Set unique command name at execution time for SimpleCov merging
+  desc("Set SimpleCov command name for FFI specs")
+  task(:set_ffi_command_name) do
+    ENV["K_SOUP_COV_MIN_HARD"] = "false"
+    ENV["MAX_ROWS"] = "0"
+    ENV["K_SOUP_COV_COMMAND_NAME"] = "FFI Specs"
+    # CRITICAL: Restrict native backends to FFI only
+    # This prevents MRI.available? from being called during backend auto-selection
+    ENV["TREE_HAVER_NATIVE_BACKEND"] = "ffi"
+  end
+  Rake::Task[:ffi_specs].enhance([:set_ffi_command_name])
+
+  # All other specs run after FFI specs
+  # Excludes :ffi_backend tests (which already ran in ffi_specs)
+  desc("Run non-FFI specs (after FFI specs have run)")
+  RSpec::Core::RakeTask.new(:remaining_specs) do |t|
+    t.pattern = "./spec/**/*_spec.rb"
+    t.rspec_opts = "--tag ~ffi_backend"
+  end
+  desc("Set SimpleCov command name for remaining specs")
+  task(:set_remaining_command_name) do
+    ENV["K_SOUP_COV_MIN_HARD"] = "false"
+    ENV["MAX_ROWS"] = "0"
+    ENV["K_SOUP_COV_COMMAND_NAME"] = "Remaining Specs"
+    # CRITICAL: Clear the FFI-only restriction set by ffi_specs
+    # This allows remaining specs to use MRI and other backends
+    ENV.delete("TREE_HAVER_NATIVE_BACKEND")
+  end
+  Rake::Task[:remaining_specs].enhance([:set_remaining_command_name])
+
+  # kettle-dev creates an RSpec::Core::RakeTask.new(:spec) which has both
+  # prerequisites and actions. We will leave that, and the default test task, alone,
+  # and use *magic* here.
+  Rake::Task[:magic].clear if Rake::Task.task_defined?(:magic)
+  desc("Run specs with FFI tests first, then backend matrix, then remaining tests")
+  task(magic: [:ffi_specs, :remaining_specs])
+rescue LoadError
+  desc("(stub) spec is unavailable")
+  task(:spec) do # rubocop:disable Rake/DuplicateTask
+    warn("NOTE: rspec isn't installed, or is disabled for #{RUBY_VERSION} in the current environment")
+  end
+
+  desc("(stub) test is unavailable")
+  task(:test) do # rubocop:disable Rake/DuplicateTask
+    warn("NOTE: rspec isn't installed, or is disabled for #{RUBY_VERSION} in the current environment")
+  end
+end
+
 ### RELEASE TASKS
 # Setup stone_checksums
 begin

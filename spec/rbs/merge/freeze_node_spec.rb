@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "spec_helper"
 require "ast/merge/rspec/shared_examples"
 
 # FreezeNode specs - works with any RBS parser backend
@@ -184,14 +185,14 @@ RSpec.describe Rbs::Merge::FreezeNode, :rbs_parsing do
         RBS
         analysis = Rbs::Merge::FileAnalysis.new(source)
 
-        # Create a mock node without :name method that partially overlaps
+        # Create a testable node without :name that partially overlaps
         # Freeze block: lines 2-4, Node: lines 1-3 (partial overlap)
-        nameless_node = double("NamelessNode")
-        # Default to false for all respond_to? calls
-        allow(nameless_node).to receive(:respond_to?).and_return(false)
-        # Override specific ones we need
-        allow(nameless_node).to receive(:respond_to?).with(:location).and_return(true)
-        allow(nameless_node).to receive(:location).and_return(double(start_line: 1, end_line: 3))
+        nameless_node = TestableNode.create(
+          type: :class_decl,
+          text: "class Foo\nend\n",
+          start_line: 1,
+          end_line: 3,
+        )
 
         # Validation happens during initialize, so the error is raised there
         # Freeze block lines 2-4, node lines 1-3 creates partial overlap:
@@ -206,7 +207,7 @@ RSpec.describe Rbs::Merge::FreezeNode, :rbs_parsing do
             nodes: [],
             overlapping_nodes: [nameless_node],
           )
-        }.to raise_error(described_class::InvalidStructureError, /Double/)
+        }.to raise_error(described_class::InvalidStructureError, /TestableNode/)
       end
     end
 

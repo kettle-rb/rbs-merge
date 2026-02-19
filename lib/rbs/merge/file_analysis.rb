@@ -115,7 +115,7 @@ module Rbs
       # @param node [Object] The declaration, NodeWrapper, or FreezeNode
       # @return [Array, nil] Signature array
       def compute_node_signature(node)
-        return nil if node.nil?
+        return if node.nil?
 
         case node
         when FreezeNode
@@ -137,7 +137,7 @@ module Rbs
       # @return [Array, nil] Signature array
       def compute_tree_sitter_signature(node)
         node_type = node.respond_to?(:type) ? node.type.to_s : nil
-        return nil unless node_type
+        return unless node_type
 
         canonical = NodeTypeNormalizer.canonical_type(node_type, :tree_sitter)
         name = extract_tree_sitter_node_name(node)
@@ -166,10 +166,17 @@ module Rbs
       # @param node [Object] TreeHaver::Node
       # @return [String, nil]
       def extract_tree_sitter_node_name(node)
-        return nil unless node.respond_to?(:each)
+        return unless node.respond_to?(:each)
 
-        name_node_types = %w[class_name module_name interface_name const_name
-                             global_name alias_name method_name]
+        name_node_types = %w[
+          class_name
+          module_name
+          interface_name
+          const_name
+          global_name
+          alias_name
+          method_name
+        ]
 
         node.each do |child|
           child_type = child.respond_to?(:type) ? child.type.to_s : ""
@@ -473,7 +480,7 @@ module Rbs
 
       # Compute signature for RBS gem node (legacy support)
       def compute_rbs_gem_signature(node)
-        return nil unless @backend == :rbs && defined?(::RBS::AST)
+        return unless @backend == :rbs && defined?(::RBS::AST)
 
         case node
         when ::RBS::AST::Declarations::Class
@@ -517,4 +524,3 @@ module Rbs
     end
   end
 end
-

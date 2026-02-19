@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "spec_helper"
 require "ast/merge/rspec/shared_examples"
 
 RSpec.describe Rbs::Merge::DebugLogger do

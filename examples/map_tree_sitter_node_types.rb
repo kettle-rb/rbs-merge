@@ -7,31 +7,50 @@
 # and outputs the actual node types produced by the grammar.
 #
 # Usage:
-#   bundle exec ruby examples/map_tree_sitter_node_types.rb
+#   ruby examples/map_tree_sitter_node_types.rb
 #
 # This helps build the NodeTypeNormalizer mappings for the tree_sitter backend.
+#
+# NOTE: tree-sitter-rbs grammar compatibility with ruby_tree_sitter may vary
+# depending on the tree-sitter ABI version used to compile the grammar.
+# If tree-sitter backends fail, the script will report an error.
 
-require "bundler/setup"
+require "bundler/inline"
+
+gemfile do
+  source "https://gem.coop"
+
+  # stdlib gems
+  gem "benchmark"
+
+  # tree-sitter MRI backend
+  gem "ruby_tree_sitter", require: false
+
+  # Load local gems
+  gem "ast-merge", path: File.expand_path("../../..", __dir__)
+  gem "tree_haver", path: File.expand_path("../../tree_haver", __dir__)
+  gem "rbs-merge", path: File.expand_path("..", __dir__)
+end
+
 require "tree_haver"
+require "rbs/merge"
 
-# Force tree-sitter backend (not RBS gem)
-# Try different backends in order of preference
-BACKENDS_TO_TRY = %i[java ffi mri rust].freeze
+# Only try tree-sitter backends (not the RBS gem backend)
+# This script is specifically for discovering tree-sitter-rbs node types
+BACKENDS_TO_TRY = %i[mri ffi rust java].freeze
 
 def find_working_backend
   BACKENDS_TO_TRY.each do |backend|
-    begin
-      TreeHaver.with_backend(backend) do
-        parser = TreeHaver.parser_for(:rbs)
-        result = parser.parse("class Foo end")
-        if result&.root_node
-          puts "Using backend: #{backend}"
-          return backend
-        end
+    TreeHaver.with_backend(backend) do
+      parser = TreeHaver.parser_for(:rbs)
+      result = parser.parse("class Foo end")
+      if result&.root_node
+        puts "Using backend: #{backend}"
+        return backend
       end
-    rescue => e
-      puts "Backend #{backend} not available: #{e.message}"
     end
+  rescue Exception => e  # TreeHaver errors inherit from Exception
+    puts "Backend #{backend} not available: #{e.message}"
   end
   nil
 end
@@ -243,4 +262,3 @@ rescue
 end
 
 puts all_types.sort.join("\n")
-

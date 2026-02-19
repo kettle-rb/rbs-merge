@@ -16,11 +16,14 @@ module Rbs
     class ConflictResolver < ::Ast::Merge::ConflictResolverBase
       # Initialize a conflict resolver
       #
-      # @param preference [Symbol] Which version wins on conflict (:template or :destination)
+      # @param preference [Symbol, Hash] Which version wins on conflict (:template or :destination)
+      #   or per-node-type Hash when used with node_typing
       # @param template_analysis [FileAnalysis] Analysis of the template file
       # @param dest_analysis [FileAnalysis] Analysis of the destination file
+      # @param node_typing [Hash{Symbol,String => #call}, nil] Node typing configuration
+      #   for per-node-type preferences
       # @param options [Hash] Additional options for forward compatibility
-      def initialize(preference:, template_analysis:, dest_analysis:, **options)
+      def initialize(preference:, template_analysis:, dest_analysis:, node_typing: nil, **options)
         super(
           strategy: :node,
           preference: preference,
@@ -28,6 +31,7 @@ module Rbs
           dest_analysis: dest_analysis,
           **options
         )
+        @node_typing = node_typing
       end
 
       # Resolve a conflict between template and destination declarations
@@ -65,8 +69,8 @@ module Rbs
           }
         end
 
-        # Apply preference
-        case @preference
+        # Apply preference (supports per-node-type preferences with node_typing)
+        case resolve_preference(template_decl, dest_decl)
         when :template
           {source: :template, declaration: template_decl, decision: DECISION_TEMPLATE}
         else # :destination (validated in initialize)
@@ -107,6 +111,41 @@ module Rbs
       end
 
       private
+
+      # Resolve preference for a matched declaration pair.
+      #
+      # @param template_decl [Object] Template declaration
+      # @param dest_decl [Object] Destination declaration
+      # @return [Symbol] :template or :destination
+      def resolve_preference(template_decl, dest_decl)
+        return @preference unless @preference.is_a?(Hash)
+
+        typed_template = apply_node_typing(template_decl)
+        typed_dest = apply_node_typing(dest_decl)
+
+        if Ast::Merge::NodeTyping.typed_node?(typed_template)
+          merge_type = Ast::Merge::NodeTyping.merge_type_for(typed_template)
+          return @preference.fetch(merge_type) { default_preference } if merge_type
+        end
+
+        if Ast::Merge::NodeTyping.typed_node?(typed_dest)
+          merge_type = Ast::Merge::NodeTyping.merge_type_for(typed_dest)
+          return @preference.fetch(merge_type) { default_preference } if merge_type
+        end
+
+        default_preference
+      end
+
+      # Apply node typing to a declaration if configured.
+      #
+      # @param decl [Object] Declaration
+      # @return [Object] Possibly typed declaration
+      def apply_node_typing(decl)
+        return decl unless @node_typing
+        return decl unless decl
+
+        Ast::Merge::NodeTyping.process(decl, @node_typing)
+      end
 
       # Extract text content from a declaration
       # @param decl [Object] Declaration
