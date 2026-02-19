@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [2.0.0] - 2026-02-19
+
+- TAG: [v2.0.0][2.0.0t]
+- COVERAGE: 72.31% -- 713/986 lines in 12 files
+- BRANCH COVERAGE: 39.77% -- 208/523 branches in 12 files
+- 98.63% documented
+
+### Added
+
 - AGENTS.md
 - **Dependency Tags Support**: Added `spec/support/dependency_tags.rb` to load shared
   dependency tags from tree_haver and ast-merge. This enables automatic exclusion of
@@ -109,8 +128,6 @@ Please file a bug if you notice a violation of semantic versioning.
   - `max_recursion_depth` parameter is still supported
   - `preference` now accepts Hash for per-type preferences
 
-### Deprecated
-
 ### Removed
 
 - **`FileAnalysis#rbs_gem_available?`** - Removed; TreeHaver handles backend availability
@@ -132,8 +149,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - **`SmartMerger#get_start_line`/`get_end_line`** - Added helper methods to support
   both NodeWrapper and RBS gem nodes in `reconstruct_declaration_with_merged_members`.
 
-### Security
-
 ## [1.0.0] - 2025-12-12
 
 - TAG: [v1.0.0][1.0.0t]
@@ -145,6 +160,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Initial release
 
-[Unreleased]: https://github.com/kettle-rb/rbs-merge/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/kettle-rb/rbs-merge/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/kettle-rb/rbs-merge/compare/v1.0.0...v2.0.0
+[2.0.0t]: https://github.com/kettle-rb/rbs-merge/releases/tag/v2.0.0
 [1.0.0]: https://github.com/kettle-rb/rbs-merge/compare/7ae936a6ae844aee513264eecc39215eed53c313...v1.0.0
 [1.0.0t]: https://github.com/kettle-rb/rbs-merge/tags/v1.0.0

@@ -5,7 +5,7 @@ module Rbs
     # Version information for Rbs::Merge
     module Version
       # Current version of the rbs-merge gem
-      VERSION = "1.0.0"
+      VERSION = "2.0.0"
     end
     VERSION = Version::VERSION # traditional location
   end

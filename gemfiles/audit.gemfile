@@ -6,6 +6,6 @@ platforms "jruby" do
   gem "rbs", ">= 3.10"
 end
 
-gemspec path: "../"
+gemspec :path => "../"
 
 eval_gemfile("modular/x_std_libs.gemfile")

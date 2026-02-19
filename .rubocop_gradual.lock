@@ -1,5 +1,5 @@
 {
-  "README.md:1149947269": [
+  "README.md:580469133": [
     [544, 10, 1, "Lint/Syntax: unexpected token tCOLON\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 177567],
     [544, 21, 2, "Lint/Syntax: unexpected token tLAMBDA\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 5858998],
     [544, 24, 7, "Lint/Syntax: formal argument cannot be a constant\n(Using Ruby 3.2 parser; configure using `TargetRubyVersion` parameter, under `AllCops`)", 1691528419],
