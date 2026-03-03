@@ -270,7 +270,35 @@ GEM
       rubocop-ast (>= 1.44.0, < 2.0)
     ruby-progressbar (1.13.0)
     ruby_engine (2.0.3)
-    ruby_tree_sitter (2.0.0)
+    ruby_tree_sitter (2.1.0-aarch64-linux-gnu)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.0-aarch64-linux-musl)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.0-arm-linux-gnu)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.0-arm-linux-musl)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.0-arm64-darwin)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.0-x86_64-darwin)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.0-x86_64-linux-gnu)
+      oppen (~> 1.0)
+      sorbet-runtime
+      zeitwerk
+    ruby_tree_sitter (2.1.0-x86_64-linux-musl)
       oppen (~> 1.0)
       sorbet-runtime
       zeitwerk
@@ -294,7 +322,7 @@ GEM
     simplecov-rcov (0.3.7)
       simplecov (>= 0.4.1)
     simplecov_json_formatter (0.1.4)
-    sorbet-runtime (0.6.12949)
+    sorbet-runtime (0.6.12982)
     standard (1.54.0)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.0)
@@ -510,7 +538,14 @@ CHECKSUMS
   rubocop-thread_safety (0.7.3) sha256=067cdd52fbf5deffc18995437e45b5194236eaff4f71de3375a1f6052e48f431
   ruby-progressbar (1.13.0) sha256=80fc9c47a9b640d6834e0dc7b3c94c9df37f08cb072b7761e4a71e22cff29b33
   ruby_engine (2.0.3) sha256=ca2ae7def8cfcdc2bfb6a186d36d5d59c8b403245dc0256c3802b767fa278aaa
-  ruby_tree_sitter (2.0.0) sha256=6a5fb853b30fdd073aafaa884610c227cc56783d7350225a98237069de03fd59
+  ruby_tree_sitter (2.1.0-aarch64-linux-gnu) sha256=f6b50e4f45c0097b043b979765012ff6defa9b8972c8e9504e55f14acd94ae2a
+  ruby_tree_sitter (2.1.0-aarch64-linux-musl) sha256=83bf8dd929b611f1084137492351bccfaa679788619c818036984c7ae209f026
+  ruby_tree_sitter (2.1.0-arm-linux-gnu) sha256=8a394672e485e46cfb34f0d8a75627955b7bc95b7035f2c3170a606b78907af5
+  ruby_tree_sitter (2.1.0-arm-linux-musl) sha256=c93e3d2dac38aca6fa3512c1db8f0c8a48a4b1275e6303c61cf156aecf28e125
+  ruby_tree_sitter (2.1.0-arm64-darwin) sha256=6df6ef21ecb98054866faa6b17d336f563dbf8fbc4aa093c551766457bfd2795
+  ruby_tree_sitter (2.1.0-x86_64-darwin) sha256=54486331954f1c96d0186ef2e0c89f054b0c033773a2fd0721f4dbba5f1c00ed
+  ruby_tree_sitter (2.1.0-x86_64-linux-gnu) sha256=d1e1d127d91f049043e8f951524f852733c8c479775684918aa0456b567358bc
+  ruby_tree_sitter (2.1.0-x86_64-linux-musl) sha256=8866852e1188a432a17f940ca0208f6658d8552eb63c4cf1ca4a9b087cb40a9d
   ruby_version (1.0.3) sha256=5930f9950746b7e6c973184398ee364ee7440b170fef7922b9f5cdf317f1ccb5
   silent_stream (1.0.12) sha256=377c43aa10033fe90c33b39ea8cd97d79f2d1c4856df598efc56f3091f3ae782
   simplecov (0.22.0) sha256=fe2622c7834ff23b98066bb0a854284b2729a569ac659f82621fc22ef36213a5
@@ -520,7 +555,7 @@ CHECKSUMS
   simplecov-lcov (0.9.0) sha256=7a77a31e200a595ed4b0249493056efd0c920601f53d2ef135ca34ee796346cd
   simplecov-rcov (0.3.7) sha256=372f50bf6df6b6350b7d0c840f2f8bdabe021861a43c26877b747c9ac96139fc
   simplecov_json_formatter (0.1.4) sha256=529418fbe8de1713ac2b2d612aa3daa56d316975d307244399fa4838c601b428
-  sorbet-runtime (0.6.12949) sha256=81af199a75dd6d9de7862c4261f528dc08287cda3218316172c0b2606c74c901
+  sorbet-runtime (0.6.12982) sha256=1834a584617bffa888b766e9651d22cf7a4b6fcdbe5fd6a30f7425358bc99378
   standard (1.54.0) sha256=7a4b08f83d9893083c8f03bc486f0feeb6a84d48233b40829c03ef4767ea0100
   standard-custom (1.0.2) sha256=424adc84179a074f1a2a309bb9cf7cd6bfdb2b6541f20c6bf9436c0ba22a652b
   standard-performance (1.9.0) sha256=49483d31be448292951d80e5e67cdcb576c2502103c7b40aec6f1b6e9c88e3f2
