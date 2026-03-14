@@ -20,7 +20,12 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Added shared comment capability and augmenter exposure across the native RBS and tree-sitter-backed paths, with normalized region / attachment access and explicit backend-parity coverage
+
 ### Changed
+
+- Preserved destination-owned docs and leading comments through template-preferred matched declarations and recursively merged members across the native, Rust, and FFI-backed validation paths
+- Preserved or promoted comments for removed destination-only declarations when `remove_template_missing_nodes: true` is enabled, while keeping destination-relative ordering stable in the documented Phase 2 contract
 
 ### Deprecated
 

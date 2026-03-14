@@ -439,12 +439,41 @@ RSpec.describe Rbs::Merge::FileAligner, :rbs_parsing do
     let(:template_analysis) { Rbs::Merge::FileAnalysis.new(template_source) }
     let(:dest_analysis) { Rbs::Merge::FileAnalysis.new(dest_source) }
 
-    it "sorts matches before template_only and dest_only" do
+    it "keeps destination-only entries interleaved with matches by destination order" do
       aligner = described_class.new(template_analysis, dest_analysis)
       alignment = aligner.align
 
-      # Verify alignment is sorted (matches come first, sorted by dest_index)
       expect(alignment).to be_an(Array)
+    end
+
+    it "keeps a documented destination-only declaration ahead of a later matched declaration" do
+      template_analysis = Rbs::Merge::FileAnalysis.new(<<~RBS)
+        class Keep
+        end
+
+        class Tail
+        end
+      RBS
+
+      dest_analysis = Rbs::Merge::FileAnalysis.new(<<~RBS)
+        class Keep
+        end
+
+        # destination docs
+        class Legacy
+        end
+
+        class Tail
+        end
+      RBS
+
+      alignment = described_class.new(template_analysis, dest_analysis).align
+
+      expect(alignment.map { |entry| [entry[:type], entry[:dest_index], entry[:template_index]] }).to eq([
+        [:match, 0, 0],
+        [:dest_only, 1, nil],
+        [:match, 2, 1],
+      ])
     end
   end
 
@@ -548,13 +577,17 @@ RSpec.describe Rbs::Merge::FileAligner, :rbs_parsing do
         sorted = alignment.sort_by do |entry|
           case entry[:type]
           when :match
-            [0, entry[:dest_index], entry[:template_index]]
+            [0, entry[:dest_index], 0, entry[:template_index] || 0]
           when :dest_only
-            [1, entry[:dest_index], 0]
+            if entry[:dest_decl].is_a?(Rbs::Merge::FreezeNode)
+              [1, entry[:dest_index], 0, 0]
+            else
+              [0, entry[:dest_index], 1, 0]
+            end
           when :template_only
-            [2, entry[:template_index], 0]
+            [2, entry[:template_index], 0, 0]
           else
-            [3, 0, 0]
+            [3, 0, 0, 0]
           end
         end
 
