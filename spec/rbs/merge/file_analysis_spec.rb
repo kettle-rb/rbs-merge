@@ -130,6 +130,393 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     end
   end
 
+  shared_examples "alias declaration extraction" do
+    describe "alias declaration extraction" do
+      subject(:analysis) { described_class.new(alias_source) }
+
+      let(:alias_source) do
+        <<~RBS
+          class Foo = Bar
+          module Baz = Quux
+        RBS
+      end
+
+      it "extracts class_alias and module_alias declarations with stable signatures" do
+        expect(analysis.statements.map(&:canonical_type)).to eq(%i[class_alias module_alias])
+        expect(analysis.statements.map(&:name)).to eq(%w[Foo Baz])
+        expect(analysis.statements.map(&:signature)).to eq([
+          [:class_alias, "Foo"],
+          [:module_alias, "Baz"],
+        ])
+      end
+    end
+  end
+
+  shared_examples "alias wrapper location/text parity" do
+    describe "alias wrapper location/text parity" do
+      subject(:analysis) { described_class.new(alias_source) }
+
+      let(:alias_source) do
+        <<~RBS
+          class Foo = Bar # trailing comment
+          module Baz = Quux # trailing comment
+
+          # postlude
+        RBS
+      end
+
+      it "extracts exact alias wrapper lines and text without trailing same-line comments" do
+        class_alias, module_alias = analysis.statements
+
+        [[class_alias, 1, "class Foo = Bar"], [module_alias, 2, "module Baz = Quux"]].each do |statement, expected_line, expected_text|
+          raw = statement.underlying_node
+          exact = if analysis.backend == :rbs
+            alias_source.byteslice(raw.location.start_pos...raw.location.end_pos)
+          else
+            alias_source.byteslice(raw.start_byte...raw.end_byte)
+          end
+
+          expect(statement.start_line).to eq(expected_line)
+          expect(statement.end_line).to eq(expected_line)
+          expect(statement.text).to eq(expected_text)
+          expect(statement.text).to eq(exact)
+        end
+
+        expect(class_alias.canonical_type).to eq(:class_alias)
+        expect(class_alias.name).to eq("Foo")
+        expect(class_alias.signature).to eq([:class_alias, "Foo"])
+
+        expect(module_alias.canonical_type).to eq(:module_alias)
+        expect(module_alias.name).to eq("Baz")
+        expect(module_alias.signature).to eq([:module_alias, "Baz"])
+      end
+    end
+  end
+
+  shared_examples "type alias declaration extraction" do
+    describe "type alias declaration extraction" do
+      subject(:analysis) { described_class.new(type_alias_source) }
+
+      let(:type_alias_source) do
+        <<~RBS
+          type user_id = String | Integer
+        RBS
+      end
+
+      it "extracts top-level type aliases with stable names and signatures" do
+        statement = analysis.statements.first
+
+        expect(statement.canonical_type).to eq(:type_alias)
+        expect(statement.name).to eq("user_id")
+        expect(statement.signature).to eq([:type_alias, "user_id"])
+        expect(analysis.generate_signature(statement)).to eq([:type_alias, "user_id"])
+      end
+    end
+  end
+
+  shared_examples "interface declaration extraction" do
+    describe "interface declaration extraction" do
+      subject(:analysis) { described_class.new(interface_source) }
+
+      let(:interface_source) do
+        <<~RBS
+          interface _Enumerable[T]
+            def each: () -> void
+          end
+        RBS
+      end
+
+      it "extracts top-level interfaces with stable names and signatures" do
+        statement = analysis.statements.first
+
+        expect(statement.canonical_type).to eq(:interface)
+        expect(statement.name).to eq("_Enumerable")
+        expect(statement.signature).to eq([:interface, "_Enumerable"])
+        expect(analysis.generate_signature(statement)).to eq([:interface, "_Enumerable"])
+      end
+    end
+  end
+
+  shared_examples "module declaration extraction" do
+    describe "module declaration extraction" do
+      subject(:analysis) { described_class.new(module_source) }
+
+      let(:module_source) do
+        <<~RBS
+          module Auth
+            def token: () -> String
+          end
+        RBS
+      end
+
+      it "extracts top-level modules with stable names and signatures" do
+        statement = analysis.statements.first
+
+        expect(statement.canonical_type).to eq(:module)
+        expect(statement.name).to eq("Auth")
+        expect(statement.signature).to eq([:module, "Auth"])
+        expect(analysis.generate_signature(statement)).to eq([:module, "Auth"])
+      end
+    end
+  end
+
+  shared_examples "class declaration extraction" do
+    describe "class declaration extraction" do
+      subject(:analysis) { described_class.new(class_source) }
+
+      let(:class_source) do
+        <<~RBS
+          class User
+            def name: () -> String
+          end
+        RBS
+      end
+
+      it "extracts top-level classes with stable names and signatures" do
+        statement = analysis.statements.first
+
+        expect(statement.canonical_type).to eq(:class)
+        expect(statement.name).to eq("User")
+        expect(statement.signature).to eq([:class, "User"])
+        expect(analysis.generate_signature(statement)).to eq([:class, "User"])
+      end
+    end
+  end
+
+  shared_examples "class wrapper location/text parity" do
+    describe "class wrapper location/text parity" do
+      subject(:analysis) { described_class.new(class_source) }
+
+      let(:class_source) do
+        <<~RBS
+          class User
+            def name: () -> String
+          end # trailing comment
+
+          # postlude
+        RBS
+      end
+
+      it "extracts exact wrapper lines and text without trailing same-line comments" do
+        statement = analysis.statements.first
+        raw = statement.underlying_node
+        exact = if analysis.backend == :rbs
+          class_source.byteslice(raw.location.start_pos...raw.location.end_pos)
+        else
+          class_source.byteslice(raw.start_byte...raw.end_byte)
+        end
+
+        expect(statement.canonical_type).to eq(:class)
+        expect(statement.name).to eq("User")
+        expect(statement.start_line).to eq(1)
+        expect(statement.end_line).to eq(3)
+        expect(statement.text).to eq("class User\n  def name: () -> String\nend")
+        expect(statement.text).to eq(exact)
+      end
+    end
+  end
+
+  shared_examples "module wrapper location/text parity" do
+    describe "module wrapper location/text parity" do
+      subject(:analysis) { described_class.new(module_source) }
+
+      let(:module_source) do
+        <<~RBS
+          module Auth
+            def token: () -> String
+          end # trailing comment
+
+          # postlude
+        RBS
+      end
+
+      it "extracts exact wrapper lines and text without trailing same-line comments" do
+        statement = analysis.statements.first
+        raw = statement.underlying_node
+        exact = if analysis.backend == :rbs
+          module_source.byteslice(raw.location.start_pos...raw.location.end_pos)
+        else
+          module_source.byteslice(raw.start_byte...raw.end_byte)
+        end
+
+        expect(statement.canonical_type).to eq(:module)
+        expect(statement.name).to eq("Auth")
+        expect(statement.start_line).to eq(1)
+        expect(statement.end_line).to eq(3)
+        expect(statement.text).to eq("module Auth\n  def token: () -> String\nend")
+        expect(statement.text).to eq(exact)
+      end
+    end
+  end
+
+  shared_examples "interface wrapper location/text parity" do
+    describe "interface wrapper location/text parity" do
+      subject(:analysis) { described_class.new(interface_source) }
+
+      let(:interface_source) do
+        <<~RBS
+          interface _Enumerable[T]
+            def each: () -> void
+          end # trailing comment
+
+          # postlude
+        RBS
+      end
+
+      it "extracts exact wrapper lines and text without trailing same-line comments" do
+        statement = analysis.statements.first
+        raw = statement.underlying_node
+        exact = if analysis.backend == :rbs
+          interface_source.byteslice(raw.location.start_pos...raw.location.end_pos)
+        else
+          interface_source.byteslice(raw.start_byte...raw.end_byte)
+        end
+
+        expect(statement.canonical_type).to eq(:interface)
+        expect(statement.name).to eq("_Enumerable")
+        expect(statement.start_line).to eq(1)
+        expect(statement.end_line).to eq(3)
+        expect(statement.text).to eq("interface _Enumerable[T]\n  def each: () -> void\nend")
+        expect(statement.text).to eq(exact)
+      end
+    end
+  end
+
+  shared_examples "type alias wrapper location/text parity" do
+    describe "type alias wrapper location/text parity" do
+      subject(:analysis) { described_class.new(type_alias_source) }
+
+      let(:type_alias_source) do
+        <<~RBS
+          type user_id = String # trailing comment
+
+          # postlude
+        RBS
+      end
+
+      it "extracts exact wrapper lines and text without trailing same-line comments" do
+        statement = analysis.statements.first
+        raw = statement.underlying_node
+        exact = if analysis.backend == :rbs
+          type_alias_source.byteslice(raw.location.start_pos...raw.location.end_pos)
+        else
+          type_alias_source.byteslice(raw.start_byte...raw.end_byte)
+        end
+
+        expect(statement.canonical_type).to eq(:type_alias)
+        expect(statement.name).to eq("user_id")
+        expect(statement.start_line).to eq(1)
+        expect(statement.end_line).to eq(1)
+        expect(statement.text).to eq("type user_id = String")
+        expect(statement.text).to eq(exact)
+      end
+    end
+  end
+
+  shared_examples "constant wrapper location/text parity" do
+    describe "constant wrapper location/text parity" do
+      subject(:analysis) { described_class.new(constant_source) }
+
+      let(:constant_source) do
+        <<~RBS
+          USER_ID: String # trailing comment
+
+          # postlude
+        RBS
+      end
+
+      it "extracts exact wrapper lines and text without trailing same-line comments" do
+        statement = analysis.statements.first
+        raw = statement.underlying_node
+        exact = if analysis.backend == :rbs
+          constant_source.byteslice(raw.location.start_pos...raw.location.end_pos)
+        else
+          constant_source.byteslice(raw.start_byte...raw.end_byte)
+        end
+
+        expect(statement.canonical_type).to eq(:constant)
+        expect(statement.name).to eq("USER_ID")
+        expect(statement.start_line).to eq(1)
+        expect(statement.end_line).to eq(1)
+        expect(statement.text).to eq("USER_ID: String")
+        expect(statement.text).to eq(exact)
+      end
+    end
+  end
+
+  shared_examples "global wrapper location/text parity" do
+    describe "global wrapper location/text parity" do
+      subject(:analysis) { described_class.new(global_source) }
+
+      let(:global_source) do
+        <<~RBS
+          $stdout: IO # trailing comment
+
+          # postlude
+        RBS
+      end
+
+      it "extracts exact wrapper lines and text without trailing same-line comments" do
+        statement = analysis.statements.first
+        raw = statement.underlying_node
+        exact = if analysis.backend == :rbs
+          global_source.byteslice(raw.location.start_pos...raw.location.end_pos)
+        else
+          global_source.byteslice(raw.start_byte...raw.end_byte)
+        end
+
+        expect(statement.canonical_type).to eq(:global)
+        expect(statement.name).to eq("$stdout")
+        expect(statement.start_line).to eq(1)
+        expect(statement.end_line).to eq(1)
+        expect(statement.text).to eq("$stdout: IO")
+        expect(statement.text).to eq(exact)
+      end
+    end
+  end
+
+  shared_examples "constant declaration extraction" do
+    describe "constant declaration extraction" do
+      subject(:analysis) { described_class.new(constant_source) }
+
+      let(:constant_source) do
+        <<~RBS
+          USER_ID: String
+        RBS
+      end
+
+      it "extracts top-level constants with stable names and signatures" do
+        statement = analysis.statements.first
+
+        expect(statement.canonical_type).to eq(:constant)
+        expect(statement.name).to eq("USER_ID")
+        expect(statement.signature).to eq([:constant, "USER_ID"])
+        expect(analysis.generate_signature(statement)).to eq([:constant, "USER_ID"])
+      end
+    end
+  end
+
+  shared_examples "global declaration extraction" do
+    describe "global declaration extraction" do
+      subject(:analysis) { described_class.new(global_source) }
+
+      let(:global_source) do
+        <<~RBS
+          $stdout: IO
+        RBS
+      end
+
+      it "extracts top-level globals with stable names and signatures" do
+        statement = analysis.statements.first
+
+        expect(statement.canonical_type).to eq(:global)
+        expect(statement.name).to eq("$stdout")
+        expect(statement.signature).to eq([:global, "$stdout"])
+        expect(analysis.generate_signature(statement)).to eq([:global, "$stdout"])
+      end
+    end
+  end
+
   shared_examples "signature generation" do
     describe "#generate_signature" do
       subject(:analysis) { described_class.new(source_for_signature) }
@@ -153,6 +540,209 @@ RSpec.describe Rbs::Merge::FileAnalysis do
       it "returns nil for nil input" do
         sig = analysis.generate_signature(nil)
         expect(sig).to be_nil
+      end
+    end
+  end
+
+  shared_examples "nested overloaded member extraction" do
+    describe "nested overloaded member extraction" do
+      subject(:analysis) { described_class.new(overloaded_source) }
+
+      let(:overloaded_source) do
+        <<~RBS
+          interface _Foo
+            def foo: () -> String
+            def foo: (Integer) -> String
+          end
+        RBS
+      end
+
+      it "extracts overloaded members from container declarations" do
+        statement = analysis.statements.first
+
+        expect(statement.name).to eq("_Foo")
+        expect(statement.members.size).to eq(2)
+        expect(statement.members.map(&:name)).to eq(%w[foo foo])
+        expect(statement.members.map(&:signature)).to eq([
+          [:method, "foo", :instance],
+          [:method, "foo", :instance],
+        ])
+      end
+    end
+  end
+
+  shared_examples "nested attribute member extraction" do
+    describe "nested attribute member extraction" do
+      subject(:analysis) { described_class.new(attribute_source) }
+
+      let(:attribute_source) do
+        <<~RBS
+          class Foo
+            attr_reader name: String
+            attr_writer age: Integer
+            attr_accessor admin: bool
+          end
+        RBS
+      end
+
+      it "extracts attribute members from container declarations" do
+        statement = analysis.statements.first
+
+        expect(statement.name).to eq("Foo")
+        expect(statement.members.size).to eq(3)
+        expect(statement.members.map(&:canonical_type)).to eq(%i[attr_reader attr_writer attr_accessor])
+        expect(statement.members.map(&:name)).to eq(%w[name age admin])
+        expect(statement.members.map(&:signature)).to eq([
+          [:attr_reader, "name"],
+          [:attr_writer, "age"],
+          [:attr_accessor, "admin"],
+        ])
+      end
+    end
+  end
+
+  shared_examples "nested alias member extraction" do
+    describe "nested alias member extraction" do
+      subject(:analysis) { described_class.new(alias_source) }
+
+      let(:alias_source) do
+        <<~RBS
+          class Foo
+            alias new_name old_name
+          end
+        RBS
+      end
+
+      it "extracts alias members from container declarations" do
+        statement = analysis.statements.first
+
+        expect(statement.name).to eq("Foo")
+        expect(statement.members.size).to eq(1)
+
+        member = statement.members.first
+        expect(member.canonical_type).to eq(:alias)
+        expect(member.name).to eq("new_name")
+        expect(member.alias_new_name).to eq("new_name")
+        expect(member.alias_old_name).to eq("old_name")
+        expect(member.signature).to eq([:alias, "new_name", "old_name"])
+      end
+    end
+  end
+
+  shared_examples "nested variable member extraction" do
+    describe "nested variable member extraction" do
+      subject(:analysis) { described_class.new(variable_source) }
+
+      let(:variable_source) do
+        <<~RBS
+          class Foo
+            @ivar: String
+            self.@civar: Integer
+            @@cvar: bool
+          end
+        RBS
+      end
+
+      it "extracts ivar, civar, and cvar members from container declarations" do
+        statement = analysis.statements.first
+
+        expect(statement.name).to eq("Foo")
+        expect(statement.members.size).to eq(3)
+        expect(statement.members.map(&:canonical_type)).to eq(%i[ivar civar cvar])
+        expect(statement.members.map(&:name)).to eq(["@ivar", "@civar", "@@cvar"])
+        expect(statement.members.map(&:signature)).to eq([
+          [:ivar, "@ivar"],
+          [:civar, "@civar"],
+          [:cvar, "@@cvar"],
+        ])
+      end
+    end
+  end
+
+  shared_examples "nested singleton method extraction" do
+    describe "nested singleton method extraction" do
+      subject(:analysis) { described_class.new(method_source) }
+
+      let(:method_source) do
+        <<~RBS
+          class Foo
+            def self.build: () -> String
+            def instance_call: () -> Integer
+          end
+        RBS
+      end
+
+      it "distinguishes singleton and instance method kinds inside container declarations" do
+        statement = analysis.statements.first
+
+        expect(statement.name).to eq("Foo")
+        expect(statement.members.map(&:name)).to eq(%w[build instance_call])
+        expect(statement.members.map(&:method_kind)).to eq(%i[singleton instance])
+        expect(statement.members.map(&:signature)).to eq([
+          [:method, "build", :singleton],
+          [:method, "instance_call", :instance],
+        ])
+      end
+    end
+  end
+
+  shared_examples "nested visibility member extraction" do
+    describe "nested visibility member extraction" do
+      subject(:analysis) { described_class.new(visibility_source) }
+
+      let(:visibility_source) do
+        <<~RBS
+          class Foo
+            public
+            def visible: () -> String
+            private
+            def hidden: () -> Integer
+          end
+        RBS
+      end
+
+      it "extracts stable public/private visibility members from container declarations" do
+        statement = analysis.statements.first
+
+        expect(statement.name).to eq("Foo")
+        expect(statement.members.map(&:canonical_type)).to eq(%i[visibility method visibility method])
+        expect(statement.members.map(&:name)).to eq(%w[public visible private hidden])
+        expect(statement.members.select(&:visibility?).map(&:visibility_kind)).to eq(%i[public private])
+        expect(statement.members.map(&:signature)).to eq([
+          [:visibility, :public],
+          [:method, "visible", :instance],
+          [:visibility, :private],
+          [:method, "hidden", :instance],
+        ])
+      end
+    end
+  end
+
+  shared_examples "nested mixin member extraction" do
+    describe "nested mixin member extraction" do
+      subject(:analysis) { described_class.new(mixin_source) }
+
+      let(:mixin_source) do
+        <<~RBS
+          class Foo
+            include Enumerable[String]
+            extend Kernel
+            prepend Decorator
+          end
+        RBS
+      end
+
+      it "extracts stable include/extend/prepend members from container declarations" do
+        statement = analysis.statements.first
+
+        expect(statement.name).to eq("Foo")
+        expect(statement.members.map(&:canonical_type)).to eq(%i[include extend prepend])
+        expect(statement.members.map(&:name)).to eq(%w[Enumerable Kernel Decorator])
+        expect(statement.members.map(&:signature)).to eq([
+          [:include, "Enumerable"],
+          [:extend, "Kernel"],
+          [:prepend, "Decorator"],
+        ])
       end
     end
   end
@@ -195,6 +785,118 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     end
   end
 
+  shared_examples "freeze-contained declaration signatures" do
+    describe "with freeze-contained top-level declarations" do
+      subject(:analysis) { described_class.new(source_with_frozen_declarations) }
+
+      let(:source_with_frozen_declarations) do
+        <<~RBS
+          # rbs-merge:freeze
+          type custom = String
+          class Foo = Bar
+          module Baz = Quux
+          # rbs-merge:unfreeze
+        RBS
+      end
+
+      it "keeps stable signatures for contained declarations inside the freeze block" do
+        freeze_block = analysis.freeze_blocks.first
+
+        expect(freeze_block.nodes.map { |node| analysis.generate_signature(node) }).to eq([
+          [:type_alias, "custom"],
+          [:class_alias, "Foo"],
+          [:module_alias, "Baz"],
+        ])
+      end
+    end
+  end
+
+  shared_examples "default freeze token comment filtering" do
+    describe "with default freeze token markers before a declaration" do
+      subject(:analysis) { described_class.new(source_with_default_token) }
+
+      let(:source_with_default_token) do
+        <<~RBS
+          # rbs-merge:freeze
+          type custom = String
+          # rbs-merge:unfreeze
+
+          class Foo
+          end
+        RBS
+      end
+
+      it "keeps default-token freeze markers out of tracked comments and following declaration attachments" do
+        owner = analysis.statements.find { |statement| statement.respond_to?(:canonical_type) && statement.canonical_type == :class }
+
+        expect(analysis.comment_nodes).to be_empty
+        expect(analysis.comment_attachment_for(owner).leading_region).to be_nil
+      end
+
+      it "keeps reason-bearing default-token freeze markers out of tracked comments and following declaration attachments" do
+        analysis_with_reason = described_class.new(<<~RBS)
+          # rbs-merge:freeze keep local customization
+          type custom = String
+          # rbs-merge:unfreeze resume normal merge
+
+          class Foo
+          end
+        RBS
+
+        owner = analysis_with_reason.statements.find { |statement| statement.respond_to?(:canonical_type) && statement.canonical_type == :class }
+
+        expect(analysis_with_reason.comment_nodes).to be_empty
+        expect(analysis_with_reason.comment_attachment_for(owner).leading_region).to be_nil
+      end
+
+      it "attaches docs immediately above a reason-bearing freeze marker to the freeze block" do
+        analysis_with_reason_and_docs = described_class.new(<<~RBS)
+          # keep freeze docs
+          # rbs-merge:freeze keep local customization
+          type custom = String
+          # rbs-merge:unfreeze resume normal merge
+
+          class Foo
+          end
+        RBS
+
+        freeze_block = analysis_with_reason_and_docs.freeze_blocks.first
+        owner = analysis_with_reason_and_docs.statements.find { |statement| statement.respond_to?(:canonical_type) && statement.canonical_type == :class }
+
+        expect(analysis_with_reason_and_docs.comment_nodes.map(&:text)).to eq(["# keep freeze docs"])
+        expect(analysis_with_reason_and_docs.comment_attachment_for(freeze_block).leading_region&.normalized_content).to eq("keep freeze docs")
+        expect(analysis_with_reason_and_docs.comment_attachment_for(owner).leading_region).to be_nil
+      end
+    end
+  end
+
+  shared_examples "freeze block leading docs ownership" do
+    describe "with docs immediately above a freeze block" do
+      subject(:analysis) { described_class.new(source_with_documented_freeze_block) }
+
+      let(:source_with_documented_freeze_block) do
+        <<~RBS
+          # keep freeze docs
+          # rbs-merge:freeze
+          type custom = String
+          # rbs-merge:unfreeze
+
+          class Foo
+          end
+        RBS
+      end
+
+      it "attaches the leading docs to the freeze block, not the following declaration" do
+        freeze_block = analysis.freeze_blocks.first
+        following_class = analysis.statements.find { |statement| statement.respond_to?(:canonical_type) && statement.canonical_type == :class }
+
+        expect(analysis.comment_nodes.map(&:text)).to eq(["# keep freeze docs"])
+        expect(analysis.comment_attachment_for(freeze_block).leading_region&.normalized_content).to eq("keep freeze docs")
+        expect(analysis.comment_attachment_for(following_class).leading_region).to be_nil
+      end
+    end
+  end
+
   shared_examples "custom freeze token" do
     describe "with custom freeze token" do
       subject(:analysis) { described_class.new(source_with_custom_token, freeze_token: "my-token") }
@@ -202,15 +904,77 @@ RSpec.describe Rbs::Merge::FileAnalysis do
       let(:source_with_custom_token) do
         <<~RBS
           # my-token:freeze
-          class Foo
-            def foo: () -> void
-          end
+          type custom = String
           # my-token:unfreeze
+
+          class Foo
+          end
         RBS
       end
 
       it "recognizes the custom token" do
         expect(analysis.freeze_blocks.size).to eq(1)
+      end
+
+      it "keeps custom-token freeze markers out of tracked comments and following declaration attachments" do
+        owner = analysis.statements.find { |statement| statement.respond_to?(:canonical_type) && statement.canonical_type == :class }
+
+        expect(analysis.comment_nodes).to be_empty
+        expect(analysis.comment_attachment_for(owner).leading_region).to be_nil
+      end
+
+      it "keeps reason-bearing custom-token freeze markers out of tracked comments and following declaration attachments" do
+        analysis_with_reason = described_class.new(<<~RBS, freeze_token: "my-token")
+          # my-token:freeze keep local customization
+          type custom = String
+          # my-token:unfreeze resume normal merge
+
+          class Foo
+          end
+        RBS
+
+        owner = analysis_with_reason.statements.find { |statement| statement.respond_to?(:canonical_type) && statement.canonical_type == :class }
+
+        expect(analysis_with_reason.comment_nodes).to be_empty
+        expect(analysis_with_reason.comment_attachment_for(owner).leading_region).to be_nil
+      end
+
+      it "attaches docs immediately above a custom-token freeze marker to the freeze block" do
+        documented_analysis = described_class.new(<<~RBS, freeze_token: "my-token")
+          # keep custom freeze docs
+          # my-token:freeze
+          type custom = String
+          # my-token:unfreeze
+
+          class Foo
+          end
+        RBS
+
+        freeze_block = documented_analysis.freeze_blocks.first
+        owner = documented_analysis.statements.find { |statement| statement.respond_to?(:canonical_type) && statement.canonical_type == :class }
+
+        expect(documented_analysis.comment_nodes.map(&:text)).to eq(["# keep custom freeze docs"])
+        expect(documented_analysis.comment_attachment_for(freeze_block).leading_region&.normalized_content).to eq("keep custom freeze docs")
+        expect(documented_analysis.comment_attachment_for(owner).leading_region).to be_nil
+      end
+
+      it "attaches docs immediately above a reason-bearing custom-token freeze marker to the freeze block" do
+        documented_analysis = described_class.new(<<~RBS, freeze_token: "my-token")
+          # keep custom freeze docs
+          # my-token:freeze keep local customization
+          type custom = String
+          # my-token:unfreeze resume normal merge
+
+          class Foo
+          end
+        RBS
+
+        freeze_block = documented_analysis.freeze_blocks.first
+        owner = documented_analysis.statements.find { |statement| statement.respond_to?(:canonical_type) && statement.canonical_type == :class }
+
+        expect(documented_analysis.comment_nodes.map(&:text)).to eq(["# keep custom freeze docs"])
+        expect(documented_analysis.comment_attachment_for(freeze_block).leading_region&.normalized_content).to eq("keep custom freeze docs")
+        expect(documented_analysis.comment_attachment_for(owner).leading_region).to be_nil
       end
     end
   end
@@ -262,6 +1026,39 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     end
   end
 
+  shared_examples "shared comment capability" do
+    describe "shared comment capability" do
+      subject(:analysis) { described_class.new(commented_source) }
+
+      let(:commented_source) do
+        <<~RBS
+          # preamble docs
+
+          class Foo
+          end
+
+          # postlude docs
+        RBS
+      end
+
+      it "exposes shared comment nodes and line lookup" do
+        expect(analysis.comment_nodes.map(&:line_number)).to eq([1, 6])
+        expect(analysis.comment_node_at(1)&.text).to include("preamble")
+      end
+
+      it "builds declaration attachments and document boundary regions" do
+        owner = analysis.statements.first
+        attachment = analysis.comment_attachment_for(owner)
+
+        expect(attachment.leading_region.nodes.map(&:line_number)).to eq([1])
+
+        augmenter = analysis.comment_augmenter(owners: analysis.statements)
+        expect(augmenter.preamble_region.nil? || augmenter.preamble_region.nodes.empty?).to be(true)
+        expect(augmenter.postlude_region.nodes.map(&:line_number)).to eq([6])
+      end
+    end
+  end
+
   # ============================================================
   # :auto backend tests (uses whatever is available)
   # This tests the default behavior most users will experience
@@ -300,11 +1097,36 @@ RSpec.describe Rbs::Merge::FileAnalysis do
 
     it_behaves_like "invalid RBS detection"
     it_behaves_like "multiple declarations"
+    it_behaves_like "alias declaration extraction"
+    it_behaves_like "alias wrapper location/text parity"
+    it_behaves_like "type alias declaration extraction"
+    it_behaves_like "interface declaration extraction"
+    it_behaves_like "module declaration extraction"
+    it_behaves_like "class declaration extraction"
+    it_behaves_like "class wrapper location/text parity"
+    it_behaves_like "module wrapper location/text parity"
+    it_behaves_like "interface wrapper location/text parity"
+    it_behaves_like "type alias wrapper location/text parity"
+    it_behaves_like "constant wrapper location/text parity"
+    it_behaves_like "global wrapper location/text parity"
+    it_behaves_like "constant declaration extraction"
+    it_behaves_like "global declaration extraction"
     it_behaves_like "signature generation"
+    it_behaves_like "nested overloaded member extraction"
+    it_behaves_like "nested attribute member extraction"
+    it_behaves_like "nested alias member extraction"
+    it_behaves_like "nested variable member extraction"
+    it_behaves_like "nested singleton method extraction"
+    it_behaves_like "nested visibility member extraction"
+    it_behaves_like "nested mixin member extraction"
     it_behaves_like "freeze blocks"
+    it_behaves_like "freeze-contained declaration signatures"
+    it_behaves_like "default freeze token comment filtering"
+    it_behaves_like "freeze block leading docs ownership"
     it_behaves_like "custom freeze token"
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
+    it_behaves_like "shared comment capability"
   end
 
   # ============================================================
@@ -321,11 +1143,36 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     it_behaves_like "valid RBS parsing", expected_backend: :rbs
     it_behaves_like "invalid RBS detection"
     it_behaves_like "multiple declarations"
+    it_behaves_like "alias declaration extraction"
+    it_behaves_like "alias wrapper location/text parity"
+    it_behaves_like "type alias declaration extraction"
+    it_behaves_like "interface declaration extraction"
+    it_behaves_like "module declaration extraction"
+    it_behaves_like "class declaration extraction"
+    it_behaves_like "class wrapper location/text parity"
+    it_behaves_like "module wrapper location/text parity"
+    it_behaves_like "interface wrapper location/text parity"
+    it_behaves_like "type alias wrapper location/text parity"
+    it_behaves_like "constant wrapper location/text parity"
+    it_behaves_like "global wrapper location/text parity"
+    it_behaves_like "constant declaration extraction"
+    it_behaves_like "global declaration extraction"
     it_behaves_like "signature generation"
+    it_behaves_like "nested overloaded member extraction"
+    it_behaves_like "nested attribute member extraction"
+    it_behaves_like "nested alias member extraction"
+    it_behaves_like "nested variable member extraction"
+    it_behaves_like "nested singleton method extraction"
+    it_behaves_like "nested visibility member extraction"
+    it_behaves_like "nested mixin member extraction"
     it_behaves_like "freeze blocks"
+    it_behaves_like "freeze-contained declaration signatures"
+    it_behaves_like "default freeze token comment filtering"
+    it_behaves_like "freeze block leading docs ownership"
     it_behaves_like "custom freeze token"
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
+    it_behaves_like "shared comment capability"
 
     # RBS gem specific tests
     describe "RBS gem specific features" do
@@ -362,15 +1209,40 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     it_behaves_like "valid RBS parsing", expected_backend: :tree_sitter
     it_behaves_like "invalid RBS detection"
     it_behaves_like "multiple declarations"
+    it_behaves_like "alias declaration extraction"
+    it_behaves_like "alias wrapper location/text parity"
+    it_behaves_like "type alias declaration extraction"
+    it_behaves_like "interface declaration extraction"
+    it_behaves_like "module declaration extraction"
+    it_behaves_like "class declaration extraction"
+    it_behaves_like "class wrapper location/text parity"
+    it_behaves_like "module wrapper location/text parity"
+    it_behaves_like "interface wrapper location/text parity"
+    it_behaves_like "type alias wrapper location/text parity"
+    it_behaves_like "constant wrapper location/text parity"
+    it_behaves_like "global wrapper location/text parity"
+    it_behaves_like "constant declaration extraction"
+    it_behaves_like "global declaration extraction"
     it_behaves_like "signature generation"
+    it_behaves_like "nested overloaded member extraction"
+    it_behaves_like "nested attribute member extraction"
+    it_behaves_like "nested alias member extraction"
+    it_behaves_like "nested variable member extraction"
+    it_behaves_like "nested singleton method extraction"
+    it_behaves_like "nested visibility member extraction"
+    it_behaves_like "nested mixin member extraction"
     it_behaves_like "freeze blocks"
+    it_behaves_like "freeze-contained declaration signatures"
+    it_behaves_like "default freeze token comment filtering"
+    it_behaves_like "freeze block leading docs ownership"
     it_behaves_like "custom freeze token"
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
+    it_behaves_like "shared comment capability"
   end
 
   # ============================================================
-  # Explicit Java backend tests (JRuby with tree-sitter-rbs )
+  # Explicit Java backend tests
   # ============================================================
 
   context "with explicit Java backend", :java_backend, :rbs_grammar do
@@ -383,11 +1255,35 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     it_behaves_like "valid RBS parsing", expected_backend: :tree_sitter
     it_behaves_like "invalid RBS detection"
     it_behaves_like "multiple declarations"
+    it_behaves_like "alias declaration extraction"
+    it_behaves_like "type alias declaration extraction"
+    it_behaves_like "interface declaration extraction"
+    it_behaves_like "module declaration extraction"
+    it_behaves_like "class declaration extraction"
+    it_behaves_like "class wrapper location/text parity"
+    it_behaves_like "module wrapper location/text parity"
+    it_behaves_like "interface wrapper location/text parity"
+    it_behaves_like "type alias wrapper location/text parity"
+    it_behaves_like "constant wrapper location/text parity"
+    it_behaves_like "global wrapper location/text parity"
+    it_behaves_like "constant declaration extraction"
+    it_behaves_like "global declaration extraction"
     it_behaves_like "signature generation"
+    it_behaves_like "nested overloaded member extraction"
+    it_behaves_like "nested attribute member extraction"
+    it_behaves_like "nested alias member extraction"
+    it_behaves_like "nested variable member extraction"
+    it_behaves_like "nested singleton method extraction"
+    it_behaves_like "nested visibility member extraction"
+    it_behaves_like "nested mixin member extraction"
     it_behaves_like "freeze blocks"
+    it_behaves_like "freeze-contained declaration signatures"
+    it_behaves_like "default freeze token comment filtering"
+    it_behaves_like "freeze block leading docs ownership"
     it_behaves_like "custom freeze token"
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
+    it_behaves_like "shared comment capability"
   end
 
   # ============================================================
@@ -404,11 +1300,36 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     it_behaves_like "valid RBS parsing", expected_backend: :tree_sitter
     it_behaves_like "invalid RBS detection"
     it_behaves_like "multiple declarations"
+    it_behaves_like "alias declaration extraction"
+    it_behaves_like "alias wrapper location/text parity"
+    it_behaves_like "type alias declaration extraction"
+    it_behaves_like "interface declaration extraction"
+    it_behaves_like "module declaration extraction"
+    it_behaves_like "class declaration extraction"
+    it_behaves_like "class wrapper location/text parity"
+    it_behaves_like "module wrapper location/text parity"
+    it_behaves_like "interface wrapper location/text parity"
+    it_behaves_like "type alias wrapper location/text parity"
+    it_behaves_like "constant wrapper location/text parity"
+    it_behaves_like "global wrapper location/text parity"
+    it_behaves_like "constant declaration extraction"
+    it_behaves_like "global declaration extraction"
     it_behaves_like "signature generation"
+    it_behaves_like "nested overloaded member extraction"
+    it_behaves_like "nested attribute member extraction"
+    it_behaves_like "nested alias member extraction"
+    it_behaves_like "nested variable member extraction"
+    it_behaves_like "nested singleton method extraction"
+    it_behaves_like "nested visibility member extraction"
+    it_behaves_like "nested mixin member extraction"
     it_behaves_like "freeze blocks"
+    it_behaves_like "freeze-contained declaration signatures"
+    it_behaves_like "default freeze token comment filtering"
+    it_behaves_like "freeze block leading docs ownership"
     it_behaves_like "custom freeze token"
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
+    it_behaves_like "shared comment capability"
   end
 
   # ============================================================
@@ -425,10 +1346,35 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     it_behaves_like "valid RBS parsing", expected_backend: :tree_sitter
     it_behaves_like "invalid RBS detection"
     it_behaves_like "multiple declarations"
+    it_behaves_like "alias declaration extraction"
+    it_behaves_like "alias wrapper location/text parity"
+    it_behaves_like "type alias declaration extraction"
+    it_behaves_like "interface declaration extraction"
+    it_behaves_like "module declaration extraction"
+    it_behaves_like "class declaration extraction"
+    it_behaves_like "class wrapper location/text parity"
+    it_behaves_like "module wrapper location/text parity"
+    it_behaves_like "interface wrapper location/text parity"
+    it_behaves_like "type alias wrapper location/text parity"
+    it_behaves_like "constant wrapper location/text parity"
+    it_behaves_like "global wrapper location/text parity"
+    it_behaves_like "constant declaration extraction"
+    it_behaves_like "global declaration extraction"
     it_behaves_like "signature generation"
+    it_behaves_like "nested overloaded member extraction"
+    it_behaves_like "nested attribute member extraction"
+    it_behaves_like "nested alias member extraction"
+    it_behaves_like "nested variable member extraction"
+    it_behaves_like "nested singleton method extraction"
+    it_behaves_like "nested visibility member extraction"
+    it_behaves_like "nested mixin member extraction"
     it_behaves_like "freeze blocks"
+    it_behaves_like "freeze-contained declaration signatures"
+    it_behaves_like "default freeze token comment filtering"
+    it_behaves_like "freeze block leading docs ownership"
     it_behaves_like "custom freeze token"
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
+    it_behaves_like "shared comment capability"
   end
 end

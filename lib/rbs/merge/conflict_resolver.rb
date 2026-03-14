@@ -106,8 +106,9 @@ module Rbs
         return false unless template_type == dest_type
         return false unless NodeTypeNormalizer.container_type?(template_type)
 
-        # Both must have members
-        has_members?(template_decl) && has_members?(dest_decl)
+        # At least one side must have members so recursive merging can preserve
+        # destination-only or template-only nested members inside the matched shell.
+        has_members?(template_decl) || has_members?(dest_decl)
       end
 
       private
@@ -156,7 +157,45 @@ module Rbs
         end_line = get_decl_end_line(decl)
         return "" unless start_line && end_line
 
-        (start_line..end_line).map { |ln| analysis.line_at(ln) }.join("\n")
+        lines = []
+
+        leading_region = leading_region_for(decl, analysis)
+        if region_present?(leading_region)
+          region_start = region_start_line(leading_region)
+          if region_start && region_start < start_line
+            lines.concat((region_start...start_line).filter_map { |ln| analysis.line_at(ln) })
+          end
+        elsif decl.respond_to?(:comment) && decl.comment
+          comment_start = decl.comment.location&.start_line
+          if comment_start && comment_start < start_line
+            lines.concat((comment_start...start_line).filter_map { |ln| analysis.line_at(ln) })
+          end
+        end
+
+        lines.concat((start_line..end_line).map { |ln| analysis.line_at(ln) })
+        lines.join("\n")
+      end
+
+      def leading_region_for(decl, analysis)
+        return unless decl && analysis && analysis.respond_to?(:comment_attachment_for)
+
+        attachment = analysis.comment_attachment_for(decl)
+        attachment.leading_region if attachment.respond_to?(:leading_region)
+      end
+
+      def region_present?(region)
+        return false unless region
+        return !region.empty? if region.respond_to?(:empty?)
+        return region.nodes.any? if region.respond_to?(:nodes)
+
+        true
+      end
+
+      def region_start_line(region)
+        return region.start_line if region.respond_to?(:start_line) && region.start_line
+        return unless region.respond_to?(:nodes)
+
+        region.nodes.filter_map { |node| node.respond_to?(:line_number) ? node.line_number : nil }.min
       end
 
       # Get start line for a declaration (works with both backends)

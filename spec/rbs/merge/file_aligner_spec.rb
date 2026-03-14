@@ -5,6 +5,227 @@ require "spec_helper"
 # FileAligner specs - works with any RBS parser backend
 # Tagged with :rbs_parsing since FileAnalysis supports both RBS gem and tree-sitter-rbs
 RSpec.describe Rbs::Merge::FileAligner, :rbs_parsing do
+  shared_examples "documented declaration alignment parity" do
+    let(:documented_template_source) do
+      <<~RBS
+        # template docs
+        class Foo
+          def bar: () -> void
+        end
+      RBS
+    end
+    let(:documented_dest_source) do
+      <<~RBS
+        # destination docs
+        class Foo
+          def baz: () -> void
+        end
+      RBS
+    end
+    let(:documented_template_analysis) { Rbs::Merge::FileAnalysis.new(documented_template_source) }
+    let(:documented_dest_analysis) { Rbs::Merge::FileAnalysis.new(documented_dest_source) }
+
+    it "matches documented declarations by signature instead of leading docs" do
+      alignment = described_class.new(documented_template_analysis, documented_dest_analysis).align
+
+      expect(alignment).to include(hash_including(type: :match, template_index: 0, dest_index: 0))
+    end
+  end
+
+  shared_examples "documented destination-only alignment parity" do
+    let(:template_source_with_one_class) do
+      <<~RBS
+        class Foo
+        end
+      RBS
+    end
+    let(:dest_source_with_documented_extra_class) do
+      <<~RBS
+        class Foo
+        end
+
+        # destination docs
+        class Bar
+        end
+      RBS
+    end
+    let(:template_analysis_with_one_class) { Rbs::Merge::FileAnalysis.new(template_source_with_one_class) }
+    let(:dest_analysis_with_documented_extra_class) { Rbs::Merge::FileAnalysis.new(dest_source_with_documented_extra_class) }
+
+    it "keeps documented unmatched declarations as destination-only entries" do
+      alignment = described_class.new(
+        template_analysis_with_one_class,
+        dest_analysis_with_documented_extra_class,
+      ).align
+
+      expect(alignment).to include(hash_including(type: :dest_only, dest_index: 1))
+    end
+  end
+
+  shared_examples "freeze block alignment parity" do
+    let(:template_source_with_class) do
+      <<~RBS
+        class Foo
+          def bar: () -> void
+        end
+      RBS
+    end
+    let(:dest_source_with_frozen_class) do
+      <<~RBS
+        # rbs-merge:freeze
+        class Foo
+          def bar: () -> void
+        end
+        # rbs-merge:unfreeze
+      RBS
+    end
+    let(:template_analysis_with_class) { Rbs::Merge::FileAnalysis.new(template_source_with_class) }
+    let(:dest_analysis_with_frozen_class) { Rbs::Merge::FileAnalysis.new(dest_source_with_frozen_class) }
+
+    it "matches a frozen destination declaration to the same unfrozen template signature" do
+      alignment = described_class.new(
+        template_analysis_with_class,
+        dest_analysis_with_frozen_class,
+      ).align
+
+      match = alignment.find { |entry| entry[:type] == :match }
+
+      expect(match).not_to be_nil
+      expect(match[:template_index]).to eq(0)
+      expect(match[:dest_index]).to eq(0)
+      expect(match[:dest_decl]).to be_a(Rbs::Merge::FreezeNode)
+      expect(match[:signature]).to eq([:class, "Foo"])
+    end
+  end
+
+  shared_examples "freeze type alias alignment parity" do
+    let(:template_type_alias_source) { "type custom = String\n" }
+    let(:dest_frozen_type_alias_source) do
+      <<~RBS
+        # rbs-merge:freeze
+        type custom = String
+        # rbs-merge:unfreeze
+      RBS
+    end
+    let(:template_type_alias_analysis) { Rbs::Merge::FileAnalysis.new(template_type_alias_source) }
+    let(:dest_frozen_type_alias_analysis) { Rbs::Merge::FileAnalysis.new(dest_frozen_type_alias_source) }
+
+    it "matches a frozen destination type alias to the same unfrozen template signature" do
+      alignment = described_class.new(
+        template_type_alias_analysis,
+        dest_frozen_type_alias_analysis,
+      ).align
+
+      expect(alignment).to include(
+        hash_including(
+          type: :match,
+          template_index: 0,
+          dest_index: 0,
+          signature: [:type_alias, "custom"],
+        )
+      )
+    end
+  end
+
+  shared_examples "freeze class alias alignment parity" do
+    let(:template_class_alias_source) { "class Foo = Bar\n" }
+    let(:dest_frozen_class_alias_source) do
+      <<~RBS
+        # rbs-merge:freeze
+        class Foo = Baz
+        # rbs-merge:unfreeze
+      RBS
+    end
+    let(:template_class_alias_analysis) { Rbs::Merge::FileAnalysis.new(template_class_alias_source) }
+    let(:dest_frozen_class_alias_analysis) { Rbs::Merge::FileAnalysis.new(dest_frozen_class_alias_source) }
+
+    it "matches a frozen destination class alias to the same unfrozen template signature" do
+      alignment = described_class.new(
+        template_class_alias_analysis,
+        dest_frozen_class_alias_analysis,
+      ).align
+
+      expect(alignment).to include(
+        hash_including(
+          type: :match,
+          template_index: 0,
+          dest_index: 0,
+          signature: [:class_alias, "Foo"],
+        )
+      )
+    end
+  end
+
+  shared_examples "freeze module alias alignment parity" do
+    let(:template_module_alias_source) { "module Baz = Quux\n" }
+    let(:dest_frozen_module_alias_source) do
+      <<~RBS
+        # rbs-merge:freeze
+        module Baz = Other
+        # rbs-merge:unfreeze
+      RBS
+    end
+    let(:template_module_alias_analysis) { Rbs::Merge::FileAnalysis.new(template_module_alias_source) }
+    let(:dest_frozen_module_alias_analysis) { Rbs::Merge::FileAnalysis.new(dest_frozen_module_alias_source) }
+
+    it "matches a frozen destination module alias to the same unfrozen template signature" do
+      alignment = described_class.new(
+        template_module_alias_analysis,
+        dest_frozen_module_alias_analysis,
+      ).align
+
+      expect(alignment).to include(
+        hash_including(
+          type: :match,
+          template_index: 0,
+          dest_index: 0,
+          signature: [:module_alias, "Baz"],
+        )
+      )
+    end
+  end
+
+  shared_examples "custom freeze block alignment parity" do
+    let(:template_source_with_custom_token_class) do
+      <<~RBS
+        class Foo
+          def bar: () -> void
+        end
+      RBS
+    end
+    let(:dest_source_with_custom_token_frozen_class) do
+      <<~RBS
+        # custom-token:freeze
+        class Foo
+          def bar: () -> void
+        end
+        # custom-token:unfreeze
+      RBS
+    end
+    let(:template_analysis_with_custom_token_class) do
+      Rbs::Merge::FileAnalysis.new(template_source_with_custom_token_class, freeze_token: "custom-token")
+    end
+    let(:dest_analysis_with_custom_token_frozen_class) do
+      Rbs::Merge::FileAnalysis.new(dest_source_with_custom_token_frozen_class, freeze_token: "custom-token")
+    end
+
+    it "matches a custom-token frozen destination declaration to the same unfrozen template signature" do
+      alignment = described_class.new(
+        template_analysis_with_custom_token_class,
+        dest_analysis_with_custom_token_frozen_class,
+      ).align
+
+      expect(alignment).to include(
+        hash_including(
+          type: :match,
+          template_index: 0,
+          dest_index: 0,
+          signature: [:class, "Foo"],
+        )
+      )
+    end
+  end
+
   describe "#initialize" do
     let(:template_source) { "class Foo\nend" }
     let(:dest_source) { "class Bar\nend" }
@@ -341,5 +562,85 @@ RSpec.describe Rbs::Merge::FileAligner, :rbs_parsing do
         expect(sorted.last[:type]).to eq(:unknown)
       end
     end
+  end
+
+  describe "explicit backend parity for documented declarations", :rbs_backend do
+    around do |example|
+      TreeHaver.with_backend(:rbs) do
+        example.run
+      end
+    end
+
+    it_behaves_like "documented declaration alignment parity"
+    it_behaves_like "documented destination-only alignment parity"
+    it_behaves_like "freeze block alignment parity"
+    it_behaves_like "freeze type alias alignment parity"
+    it_behaves_like "freeze class alias alignment parity"
+    it_behaves_like "freeze module alias alignment parity"
+    it_behaves_like "custom freeze block alignment parity"
+  end
+
+  describe "explicit backend parity for documented declarations", :mri_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:mri) do
+        example.run
+      end
+    end
+
+    it_behaves_like "documented declaration alignment parity"
+    it_behaves_like "documented destination-only alignment parity"
+    it_behaves_like "freeze block alignment parity"
+    it_behaves_like "freeze type alias alignment parity"
+    it_behaves_like "freeze class alias alignment parity"
+    it_behaves_like "freeze module alias alignment parity"
+    it_behaves_like "custom freeze block alignment parity"
+  end
+
+  describe "explicit backend parity for documented declarations", :java_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:java) do
+        example.run
+      end
+    end
+
+    it_behaves_like "documented declaration alignment parity"
+    it_behaves_like "documented destination-only alignment parity"
+    it_behaves_like "freeze block alignment parity"
+    it_behaves_like "freeze type alias alignment parity"
+    it_behaves_like "freeze class alias alignment parity"
+    it_behaves_like "freeze module alias alignment parity"
+    it_behaves_like "custom freeze block alignment parity"
+  end
+
+  describe "explicit backend parity for documented declarations", :rbs_grammar, :rust_backend do
+    around do |example|
+      TreeHaver.with_backend(:rust) do
+        example.run
+      end
+    end
+
+    it_behaves_like "documented declaration alignment parity"
+    it_behaves_like "documented destination-only alignment parity"
+    it_behaves_like "freeze block alignment parity"
+    it_behaves_like "freeze type alias alignment parity"
+    it_behaves_like "freeze class alias alignment parity"
+    it_behaves_like "freeze module alias alignment parity"
+    it_behaves_like "custom freeze block alignment parity"
+  end
+
+  describe "explicit backend parity for documented declarations", :ffi_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:ffi) do
+        example.run
+      end
+    end
+
+    it_behaves_like "documented declaration alignment parity"
+    it_behaves_like "documented destination-only alignment parity"
+    it_behaves_like "freeze block alignment parity"
+    it_behaves_like "freeze type alias alignment parity"
+    it_behaves_like "freeze class alias alignment parity"
+    it_behaves_like "freeze module alias alignment parity"
+    it_behaves_like "custom freeze block alignment parity"
   end
 end

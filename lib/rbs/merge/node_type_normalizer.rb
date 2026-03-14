@@ -145,6 +145,8 @@ module Rbs
           type_alias_decl: :type_alias,
           const_decl: :constant,
           global_decl: :global,
+          class_alias_decl: :class_alias,
+          module_alias_decl: :module_alias,
 
           # Member container nodes
           members: :members_container,
@@ -154,6 +156,7 @@ module Rbs
 
           # Member types (inside member wrapper)
           method_member: :method,
+          alias_member: :alias,
           attribute_member: :attribute,  # Generic attribute, check attribyte_type child
           include_member: :include,
           extend_member: :extend,
@@ -238,6 +241,34 @@ module Rbs
           super(backend_type, backend)
         end
 
+        # Get the canonical type for a specific node, allowing node-shape-aware
+        # refinement when a backend uses generic wrapper/member node types.
+        #
+        # @param node [Object, nil] Backend node responding to #type and optionally #each
+        # @param backend [Symbol] Backend identifier
+        # @return [Symbol, nil]
+        def canonical_type_for_node(node, backend = DEFAULT_BACKEND)
+          return if node.nil?
+
+          backend_type = if backend == :tree_sitter && node.respond_to?(:type)
+            node.type
+          else
+            node.class.name
+          end
+
+          canonical = canonical_type(backend_type, backend)
+          return canonical unless backend == :tree_sitter
+
+          case canonical
+          when :attribute
+            refine_tree_sitter_attribute_type(node) || canonical
+          when :ivar
+            refine_tree_sitter_variable_type(node) || canonical
+          else
+            canonical
+          end
+        end
+
         # Wrap a node with its canonical type as merge_type.
         # Overrides the shared Normalizer to default to :rbs backend.
         #
@@ -283,6 +314,49 @@ module Rbs
         def type_definition?(type)
           canonical = type.to_sym
           %i[type_alias].include?(canonical)
+        end
+
+        private
+
+        def refine_tree_sitter_attribute_type(node)
+          return unless node.respond_to?(:each)
+
+          node.each do |child|
+            next unless child.respond_to?(:type) && child.type.to_sym == :attribyte_type
+
+            if child.respond_to?(:each)
+              child.each do |grandchild|
+                refined = canonical_type(grandchild.type, :tree_sitter)
+                return refined if %i[attr_reader attr_writer attr_accessor].include?(refined)
+              end
+            end
+
+            refined = canonical_type(child.type, :tree_sitter)
+            return refined if %i[attr_reader attr_writer attr_accessor].include?(refined)
+          end
+
+          nil
+        end
+
+        def refine_tree_sitter_variable_type(node)
+          return unless node.respond_to?(:each)
+
+          saw_self = false
+
+          node.each do |child|
+            next unless child.respond_to?(:type)
+
+            case child.type.to_sym
+            when :self
+              saw_self = true
+            when :cvar_name
+              return :cvar
+            when :ivar_name
+              return saw_self ? :civar : :ivar
+            end
+          end
+
+          nil
         end
       end
     end

@@ -6,6 +6,110 @@ require "ast/merge/rspec/shared_examples"
 # FreezeNode specs - works with any RBS parser backend
 # Tagged with :rbs_parsing since FileAnalysis supports both RBS gem and tree-sitter-rbs
 RSpec.describe Rbs::Merge::FreezeNode, :rbs_parsing do
+  shared_examples "freeze block parity" do
+    it "detects a single freeze block with stable line bounds" do
+      expect(analysis.freeze_blocks.size).to eq(1)
+
+      freeze_node = analysis.freeze_blocks.first
+      expect(freeze_node.start_line).to eq(4)
+      expect(freeze_node.end_line).to eq(6)
+    end
+
+    it "keeps contained declarations merge-addressable across backends" do
+      freeze_node = analysis.freeze_blocks.first
+      contained_node = freeze_node.nodes.first
+      contained_start_line = if contained_node.respond_to?(:start_line)
+        contained_node.start_line
+      else
+        contained_node.location&.start_line
+      end
+      contained_end_line = if contained_node.respond_to?(:end_line)
+        contained_node.end_line
+      else
+        contained_node.location&.end_line
+      end
+
+      expect(freeze_node.nodes.size).to eq(1)
+      expect(contained_start_line).to eq(5)
+      expect(contained_end_line).to eq(5)
+    end
+
+    it "preserves freeze block content, signature, location, and reason" do
+      freeze_node = analysis.freeze_blocks.first
+      location = freeze_node.location
+      signature = freeze_node.signature
+
+      expect(freeze_node.content).to include("rbs-merge:freeze")
+      expect(freeze_node.content).to include("type custom")
+      expect(freeze_node.content).to include("rbs-merge:unfreeze")
+
+      expect(signature.first).to eq(:FreezeNode)
+      expect(signature.last).to be_a(String)
+      expect(signature.last).to include("type custom")
+
+      expect(location).to be_a(described_class::Location)
+      expect(location.start_line).to eq(4)
+      expect(location.end_line).to eq(6)
+      expect(location.cover?(4)).to be(true)
+      expect(location.cover?(5)).to be(true)
+      expect(location.cover?(6)).to be(true)
+      expect(location.cover?(3)).to be(false)
+      expect(location.cover?(7)).to be(false)
+
+      expect(freeze_node.reason).to eq("Custom reason")
+    end
+  end
+
+  shared_examples "freeze block parity without reason" do
+    let(:source) do
+      <<~RBS
+        # rbs-merge:freeze
+        type custom = String
+        # rbs-merge:unfreeze
+      RBS
+    end
+
+    it "returns nil when no reason is provided" do
+      freeze_node = analysis.freeze_blocks.first
+      expect(freeze_node.reason).to be_nil
+    end
+  end
+
+  shared_examples "custom freeze token parity" do
+    let(:source) do
+      <<~RBS
+        class Before
+        end
+
+        # custom-token:freeze Custom reason
+        type custom = String
+        # custom-token:unfreeze
+
+        class After
+        end
+      RBS
+    end
+
+    let(:analysis) { Rbs::Merge::FileAnalysis.new(source, freeze_token: "custom-token") }
+
+    it "preserves custom-token freeze block content, location, contained declaration lines, and reason" do
+      freeze_node = analysis.freeze_blocks.first
+      contained_node = freeze_node.nodes.first
+      contained_start_line = contained_node.respond_to?(:start_line) ? contained_node.start_line : contained_node.location&.start_line
+      contained_end_line = contained_node.respond_to?(:end_line) ? contained_node.end_line : contained_node.location&.end_line
+
+      expect(freeze_node.content).to include("custom-token:freeze")
+      expect(freeze_node.content).to include("type custom")
+      expect(freeze_node.content).to include("custom-token:unfreeze")
+
+      expect(freeze_node.location.start_line).to eq(4)
+      expect(freeze_node.location.end_line).to eq(6)
+      expect(contained_start_line).to eq(5)
+      expect(contained_end_line).to eq(5)
+      expect(freeze_node.reason).to eq("Custom reason")
+    end
+  end
+
   # Use shared examples to validate base FreezeNodeBase integration
   it_behaves_like "Ast::Merge::FreezeNodeBase" do
     let(:freeze_node_class) { described_class }
@@ -74,10 +178,23 @@ RSpec.describe Rbs::Merge::FreezeNode, :rbs_parsing do
   end
 
   describe "#nodes" do
-    it "contains declarations within the freeze block", :rbs_backend do
+    it "contains declarations within the freeze block" do
       freeze_node = analysis.freeze_blocks.first
+      contained_node = freeze_node.nodes.first
+      contained_start_line = if contained_node.respond_to?(:start_line)
+        contained_node.start_line
+      else
+        contained_node.location&.start_line
+      end
+      contained_end_line = if contained_node.respond_to?(:end_line)
+        contained_node.end_line
+      else
+        contained_node.location&.end_line
+      end
+
       expect(freeze_node.nodes.size).to eq(1)
-      expect(freeze_node.nodes.first).to be_a(RBS::AST::Declarations::TypeAlias)
+      expect(contained_start_line).to eq(5)
+      expect(contained_end_line).to eq(5)
     end
   end
 
@@ -140,6 +257,66 @@ RSpec.describe Rbs::Merge::FreezeNode, :rbs_parsing do
         expect(freeze_node.reason).to be_nil
       end
     end
+  end
+
+  describe "explicit backend freeze parity", :rbs_backend do
+    around do |example|
+      TreeHaver.with_backend(:rbs) do
+        example.run
+      end
+    end
+
+    it_behaves_like "freeze block parity"
+    it_behaves_like "freeze block parity without reason"
+    it_behaves_like "custom freeze token parity"
+  end
+
+  describe "explicit backend freeze parity", :mri_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:mri) do
+        example.run
+      end
+    end
+
+    it_behaves_like "freeze block parity"
+    it_behaves_like "freeze block parity without reason"
+    it_behaves_like "custom freeze token parity"
+  end
+
+  describe "explicit backend freeze parity", :java_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:java) do
+        example.run
+      end
+    end
+
+    it_behaves_like "freeze block parity"
+    it_behaves_like "freeze block parity without reason"
+    it_behaves_like "custom freeze token parity"
+  end
+
+  describe "explicit backend freeze parity", :rbs_grammar, :rust_backend do
+    around do |example|
+      TreeHaver.with_backend(:rust) do
+        example.run
+      end
+    end
+
+    it_behaves_like "freeze block parity"
+    it_behaves_like "freeze block parity without reason"
+    it_behaves_like "custom freeze token parity"
+  end
+
+  describe "explicit backend freeze parity", :ffi_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:ffi) do
+        example.run
+      end
+    end
+
+    it_behaves_like "freeze block parity"
+    it_behaves_like "freeze block parity without reason"
+    it_behaves_like "custom freeze token parity"
   end
 
   describe "#inspect" do

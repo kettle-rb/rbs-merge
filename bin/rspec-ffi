@@ -31,7 +31,7 @@ if defined?(TreeSitter)
 end
 
 # Build the rspec command with FFI helper
-# CRITICAL: Use --options /dev/null to ignore .rspec which has --require spec_helper
+# CRITICAL: Use --options /dev/null to ignore .rspec which has --require spec_thin_helper
 # Use --tag ffi_backend to trigger isolated_test_mode in dependency_tags and run FFI tests
 spec_files = ARGV.empty? ? ["spec/"] : ARGV
 cmd = [
@@ -43,7 +43,7 @@ cmd = [
   "--tag",
   "ffi_backend",         # Triggers isolated_test_mode in dependency_tags
   "--require",
-  "spec_helper",         # Load spec helper
+  "spec_thin_helper",    # Load the shared thin helper stack normally provided by .rspec
   "--require",
   "spec_ffi_helper",     # Then FFI helper (configures FFI backend)
   "--format",

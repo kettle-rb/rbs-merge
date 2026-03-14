@@ -15,10 +15,14 @@
 # depending on the tree-sitter ABI version used to compile the grammar.
 # If tree-sitter backends fail, the script will report an error.
 
+WORKSPACE_ROOT = File.expand_path("../..", __dir__)
+ENV["KETTLE_RB_DEV"] = WORKSPACE_ROOT unless ENV.key?("KETTLE_RB_DEV")
+
 require "bundler/inline"
 
 gemfile do
   source "https://gem.coop"
+  require File.expand_path("nomono/lib/nomono/bundler", WORKSPACE_ROOT)
 
   # stdlib gems
   gem "benchmark"
@@ -26,10 +30,14 @@ gemfile do
   # tree-sitter MRI backend
   gem "ruby_tree_sitter", require: false
 
-  # Load local gems
-  gem "ast-merge", path: File.expand_path("../../..", __dir__)
-  gem "tree_haver", path: File.expand_path("../../tree_haver", __dir__)
-  gem "rbs-merge", path: File.expand_path("..", __dir__)
+  eval_nomono_gems(
+    gems: %w[ast-merge tree_haver rbs-merge],
+    prefix: "KETTLE_RB",
+    path_env: "KETTLE_RB_DEV",
+    vendored_gems_env: "VENDORED_GEMS",
+    vendor_gem_dir_env: "VENDOR_GEM_DIR",
+    debug_env: "KETTLE_DEV_DEBUG"
+  )
 end
 
 require "tree_haver"

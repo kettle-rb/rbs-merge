@@ -84,7 +84,7 @@ File.write("merged.rbs", result.to_s)
 
 ### The `*-merge` Gem Family
 
-The `*-merge` gem family provides intelligent, AST-based merging for various file formats. At the foundation is [tree_haver][tree_haver], which provides a unified cross-Ruby parsing API that works seamlessly across MRI, JRuby, and TruffleRuby.
+The `*-merge` gem family provides intelligent, AST-based merging for various file formats. At the foundation is [tree_haver][tree_haver], which provides the parser abstraction used by the local sibling workspace.
 
 | Gem                                      |                                                         Version / CI                                                         | Language<br>/ Format | Parser Backend(s)                                                                                     | Description                                                                      |
 |------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------:|----------------------|-------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
@@ -102,30 +102,14 @@ The `*-merge` gem family provides intelligent, AST-based merging for various fil
 | [rbs-merge][rbs-merge]                   |                   [![Version][rbs-merge-gem-i]][rbs-merge-gem] <br/> [![CI][rbs-merge-ci-i]][rbs-merge-ci]                   | RBS                  | [tree-sitter-rbs][ts-rbs] (via tree_haver), [RBS][rbs] (`rbs` std lib gem)                            | Smart merge for Ruby type signatures                                             |
 | [toml-merge][toml-merge]                 |                 [![Version][toml-merge-gem-i]][toml-merge-gem] <br/> [![CI][toml-merge-ci-i]][toml-merge-ci]                 | TOML                 | [Parslet + toml][toml], [Citrus + toml-rb][toml-rb], [tree-sitter-toml][ts-toml] (all via tree_haver) | Smart merge for TOML files                                                       |
 
-#### Backend Platform Compatibility
+#### Local development backend notes
 
-tree_haver supports multiple parsing backends, but not all backends work on all Ruby platforms:
+This repository is developed and validated in the local sibling workspace on MRI Ruby.
+The supported execution flow is the split-suite path documented in `AGENTS.md`:
 
-| Platform 👉️<br> TreeHaver Backend 👇️          | MRI | JRuby | TruffleRuby | Notes                                                                      |
-|-------------------------------------------------|:---:|:-----:|:-----------:|----------------------------------------------------------------------------|
-| **MRI** ([ruby_tree_sitter][ruby_tree_sitter])  |  ✅  |   ❌   |      ❌      | C extension, MRI only                                                      |
-| **Rust** ([tree_stump][tree_stump])             |  ✅  |   ❌   |      ❌      | Rust extension via magnus/rb-sys, MRI only                                 |
-| **FFI** ([ffi][ffi])                            |  ✅  |   ✅   |      ❌      | TruffleRuby's FFI doesn't support `STRUCT_BY_VALUE`                        |
-| **Java** ([jtreesitter][jtreesitter])           |  ❌  |   ✅   |      ❌      | JRuby only, requires grammar JARs                                          |
-| **Prism** ([prism][prism])                      |  ✅  |   ✅   |      ✅      | Ruby parsing, stdlib in Ruby 3.4+                                          |
-| **Psych** ([psych][psych])                      |  ✅  |   ✅   |      ✅      | YAML parsing, stdlib                                                       |
-| **Citrus** ([citrus][citrus])                   |  ✅  |   ✅   |      ✅      | Pure Ruby PEG parser, no native dependencies                               |
-| **Parslet** ([parslet][parslet])                |  ✅  |   ✅   |      ✅      | Pure Ruby PEG parser, no native dependencies                               |
-| **Commonmarker** ([commonmarker][commonmarker]) |  ✅  |   ❌   |      ❓      | Rust extension for Markdown (via [commonmarker-merge][commonmarker-merge]) |
-| **Markly** ([markly][markly])                   |  ✅  |   ❌   |      ❓      | C extension for Markdown  (via [markly-merge][markly-merge])               |
-
-**Legend**: ✅ = Works, ❌ = Does not work, ❓ = Untested
-
-**Why some backends don't work on certain platforms**:
-
-- **JRuby**: Runs on the JVM; cannot load native C/Rust extensions (`.so` files)
-- **TruffleRuby**: Has C API emulation via Sulong/LLVM, but it doesn't expose all MRI internals that native extensions require (e.g., `RBasic.flags`, `rb_gc_writebarrier`)
-- **FFI on TruffleRuby**: TruffleRuby's FFI implementation doesn't support returning structs by value, which tree-sitter's C API requires
+- `bin/rspec-ffi`
+- `bundle exec rake remaining_specs`
+- `bundle exec rake magic`
 
 **Example implementations** for the gem templating use case:
 
@@ -233,9 +217,7 @@ tree_haver supports multiple parsing backends, but not all backends work on all 
 
 | Tokens to Remember | [![Gem name][⛳️name-img]][👽dl-rank] [![Gem namespace][⛳️namespace-img]][📜src-gh] |
 | --- | --- |
-| Works with JRuby | [![JRuby 10.0 Compat][💎jruby-c-i]][🚎11-c-wf] [![JRuby HEAD Compat][💎jruby-headi]][🚎3-hd-wf] |
-| Works with Truffle Ruby | [![Truffle Ruby 23.1 Compat][💎truby-23.1i]][🚎9-t-wf] [![Truffle Ruby 24.1 Compat][💎truby-c-i]][🚎11-c-wf] |
-| Works with MRI Ruby 3 | [![Ruby 3.2 Compat][💎ruby-3.2i]][🚎6-s-wf] [![Ruby 3.3 Compat][💎ruby-3.3i]][🚎6-s-wf] [![Ruby 3.4 Compat][💎ruby-c-i]][🚎11-c-wf] [![Ruby HEAD Compat][💎ruby-headi]][🚎3-hd-wf] |
+| Local sibling-development mode | MRI Ruby with split FFI/non-FFI validation |
 | Support & Community | [![Join Me on Daily.dev's RubyFriends][✉️ruby-friends-img]][✉️ruby-friends] [![Live Chat on Discord][✉️discord-invite-img-ftb]][🖼️galtzo-discord] [![Get help from me on Upwork][👨🏼‍🏫expsup-upwork-img]][👨🏼‍🏫expsup-upwork] [![Get help from me on Codementor][👨🏼‍🏫expsup-codementor-img]][👨🏼‍🏫expsup-codementor] |
 | Source | [![Source on GitLab.com][📜src-gl-img]][📜src-gl] [![Source on CodeBerg.org][📜src-cb-img]][📜src-cb] [![Source on Github.com][📜src-gh-img]][📜src-gh] [![The best SHA: dQw4w9WgXcQ\!][🧮kloc-img]][🧮kloc] |
 | Documentation | [![Current release on RubyDoc.info][📜docs-cr-rd-img]][🚎yard-current] [![YARD on Galtzo.com][📜docs-head-rd-img]][🚎yard-head] [![Maintainer Blog][🚂maint-blog-img]][🚂maint-blog] [![GitLab Wiki][📜gl-wiki-img]][📜gl-wiki] [![GitHub Wiki][📜gh-wiki-img]][📜gh-wiki] |
@@ -246,11 +228,7 @@ tree_haver supports multiple parsing backends, but not all backends work on all 
 
 ### Compatibility
 
-Compatible with MRI Ruby 3.2.0+, and concordant releases of JRuby, and TruffleRuby.
-
-| 🚚 *Amazing* test matrix was brought to you by | 🔎 appraisal2 🔎 and the color 💚 green 💚 |
-| --- | --- |
-| 👟 Check it out\! | ✨ [github.com/appraisal-rb/appraisal2][💎appraisal2] ✨ |
+Develop and validate this repository only in the local sibling workspace rooted at `/home/pboling/src/kettle-rb`.
 
 ### Federated DVCS
 
@@ -758,9 +736,8 @@ Also see GitLab Contributors: <https://gitlab.com/kettle-rb/rbs-merge/-/graphs/m
 
 This Library adheres to [![Semantic Versioning 2.0.0][📌semver-img]][📌semver].
 Violations of this scheme should be reported as bugs.
-Specifically, if a minor or patch version is released that breaks backward compatibility,
-a new version should be immediately released that restores compatibility.
-Breaking changes to the public API will only be introduced with new major versions.
+Within the workspace, sibling repositories evolve in lockstep and development targets the current workspace state.
+Do not assume backward-compatibility guarantees between in-flight sibling revisions.
 
 > dropping support for a platform is both obviously and objectively a breaking change <br/>
 > —Jordan Harband ([@ljharb](https://github.com/ljharb), maintainer of SemVer) [in SemVer issue 716][📌semver-breaking]

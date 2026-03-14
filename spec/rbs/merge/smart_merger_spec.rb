@@ -180,6 +180,830 @@ RSpec.describe Rbs::Merge::SmartMerger do
         expect(result).to include("frozen_method")
       end
     end
+
+    context "when the destination freezes a documented type alias" do
+      let(:template_with_type_alias) do
+        <<~RBS
+          type custom = Integer
+        RBS
+      end
+
+      let(:destination_with_frozen_type_alias) do
+        <<~RBS
+          # rbs-merge:freeze
+          # keep frozen docs
+          type custom = String
+          # rbs-merge:unfreeze
+        RBS
+      end
+
+      it "keeps the destination freeze block intact without duplicating the matched type alias" do
+        merger = described_class.new(template_with_type_alias, destination_with_frozen_type_alias)
+
+        expect(merger.merge).to eq(<<~RBS)
+          # rbs-merge:freeze
+          # keep frozen docs
+          type custom = String
+          # rbs-merge:unfreeze
+        RBS
+      end
+    end
+
+    context "when the destination freezes documented alias declarations" do
+      let(:template_with_aliases) do
+        <<~RBS
+          class Foo = Bar
+          module Baz = Quux
+        RBS
+      end
+
+      let(:destination_with_frozen_aliases) do
+        <<~RBS
+          # rbs-merge:freeze
+          # keep alias docs
+          class Foo = CustomBar
+          module Baz = CustomQuux
+          # rbs-merge:unfreeze
+        RBS
+      end
+
+      it "keeps the destination frozen alias block intact without duplicating matched aliases" do
+        merger = described_class.new(template_with_aliases, destination_with_frozen_aliases)
+
+        expect(merger.merge).to eq(<<~RBS)
+          # rbs-merge:freeze
+          # keep alias docs
+          class Foo = CustomBar
+          module Baz = CustomQuux
+          # rbs-merge:unfreeze
+        RBS
+      end
+    end
+
+    context "when a matched declaration immediately follows a frozen destination block" do
+      let(:template_with_following_class) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:destination_with_frozen_block_before_class) do
+        <<~RBS
+          # rbs-merge:freeze
+          type custom = String
+          # rbs-merge:unfreeze
+          class Foo
+          end
+        RBS
+      end
+
+      it "does not leak freeze markers into the following declaration's leading docs" do
+        merger = described_class.new(
+          template_with_following_class,
+          destination_with_frozen_block_before_class,
+          preference: :template,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class Foo
+          end
+          # rbs-merge:freeze
+          type custom = String
+          # rbs-merge:unfreeze
+        RBS
+      end
+    end
+
+    context "when a frozen destination block has docs immediately above its marker" do
+      let(:template_with_following_class) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:destination_with_documented_frozen_block_before_class) do
+        <<~RBS
+          # keep freeze docs
+          # rbs-merge:freeze
+          type custom = String
+          # rbs-merge:unfreeze
+          class Foo
+          end
+        RBS
+      end
+
+      it "preserves the freeze block's leading docs with the block" do
+        merger = described_class.new(
+          template_with_following_class,
+          destination_with_documented_frozen_block_before_class,
+          preference: :template,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class Foo
+          end
+          # keep freeze docs
+          # rbs-merge:freeze
+          type custom = String
+          # rbs-merge:unfreeze
+        RBS
+      end
+    end
+
+    context "when a matched declaration immediately follows a custom-token frozen destination block" do
+      let(:template_with_following_class) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:destination_with_custom_token_frozen_block_before_class) do
+        <<~RBS
+          # custom-token:freeze
+          type custom = String
+          # custom-token:unfreeze
+          class Foo
+          end
+        RBS
+      end
+
+      it "does not leak custom freeze markers into the following declaration's leading docs" do
+        merger = described_class.new(
+          template_with_following_class,
+          destination_with_custom_token_frozen_block_before_class,
+          preference: :template,
+          freeze_token: "custom-token",
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class Foo
+          end
+          # custom-token:freeze
+          type custom = String
+          # custom-token:unfreeze
+        RBS
+      end
+    end
+
+    context "when a custom-token frozen destination block has docs immediately above its marker" do
+      let(:template_with_following_class) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:destination_with_documented_custom_token_frozen_block_before_class) do
+        <<~RBS
+          # keep custom freeze docs
+          # custom-token:freeze
+          type custom = String
+          # custom-token:unfreeze
+          class Foo
+          end
+        RBS
+      end
+
+      it "preserves the custom-token freeze block's leading docs with the block" do
+        merger = described_class.new(
+          template_with_following_class,
+          destination_with_documented_custom_token_frozen_block_before_class,
+          preference: :template,
+          freeze_token: "custom-token",
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class Foo
+          end
+          # keep custom freeze docs
+          # custom-token:freeze
+          type custom = String
+          # custom-token:unfreeze
+        RBS
+      end
+    end
+
+    context "when a matched declaration immediately follows a reason-bearing frozen destination block" do
+      let(:template_with_following_class) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:destination_with_reason_bearing_frozen_block_before_class) do
+        <<~RBS
+          # rbs-merge:freeze keep local customization
+          type custom = String
+          # rbs-merge:unfreeze resume normal merge
+          class Foo
+          end
+        RBS
+      end
+
+      it "does not leak reason-bearing freeze markers into the following declaration's leading docs" do
+        merger = described_class.new(
+          template_with_following_class,
+          destination_with_reason_bearing_frozen_block_before_class,
+          preference: :template,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class Foo
+          end
+          # rbs-merge:freeze keep local customization
+          type custom = String
+          # rbs-merge:unfreeze resume normal merge
+        RBS
+      end
+    end
+
+    context "when a reason-bearing frozen destination block has docs immediately above its marker" do
+      let(:template_with_following_class) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:destination_with_documented_reason_bearing_frozen_block_before_class) do
+        <<~RBS
+          # keep freeze docs
+          # rbs-merge:freeze keep local customization
+          type custom = String
+          # rbs-merge:unfreeze resume normal merge
+          class Foo
+          end
+        RBS
+      end
+
+      it "preserves the reason-bearing freeze block's leading docs with the block" do
+        merger = described_class.new(
+          template_with_following_class,
+          destination_with_documented_reason_bearing_frozen_block_before_class,
+          preference: :template,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class Foo
+          end
+          # keep freeze docs
+          # rbs-merge:freeze keep local customization
+          type custom = String
+          # rbs-merge:unfreeze resume normal merge
+        RBS
+      end
+    end
+
+    context "when a matched declaration immediately follows a reason-bearing custom-token frozen destination block" do
+      let(:template_with_following_class) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:destination_with_reason_bearing_custom_token_frozen_block_before_class) do
+        <<~RBS
+          # custom-token:freeze keep local customization
+          type custom = String
+          # custom-token:unfreeze resume normal merge
+          class Foo
+          end
+        RBS
+      end
+
+      it "does not leak reason-bearing custom freeze markers into the following declaration's leading docs" do
+        merger = described_class.new(
+          template_with_following_class,
+          destination_with_reason_bearing_custom_token_frozen_block_before_class,
+          preference: :template,
+          freeze_token: "custom-token",
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class Foo
+          end
+          # custom-token:freeze keep local customization
+          type custom = String
+          # custom-token:unfreeze resume normal merge
+        RBS
+      end
+    end
+
+    context "when a reason-bearing custom-token frozen destination block has docs immediately above its marker" do
+      let(:template_with_following_class) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:destination_with_documented_reason_bearing_custom_token_frozen_block_before_class) do
+        <<~RBS
+          # keep custom freeze docs
+          # custom-token:freeze keep local customization
+          type custom = String
+          # custom-token:unfreeze resume normal merge
+          class Foo
+          end
+        RBS
+      end
+
+      it "preserves the reason-bearing custom-token freeze block's leading docs with the block" do
+        merger = described_class.new(
+          template_with_following_class,
+          destination_with_documented_reason_bearing_custom_token_frozen_block_before_class,
+          preference: :template,
+          freeze_token: "custom-token",
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class Foo
+          end
+          # keep custom freeze docs
+          # custom-token:freeze keep local customization
+          type custom = String
+          # custom-token:unfreeze resume normal merge
+        RBS
+      end
+    end
+  end
+
+  shared_examples "template-preferred declaration-leading comment fallback" do
+    context "when the destination owns declaration-leading docs" do
+      let(:commented_template) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:commented_destination) do
+        <<~RBS
+          # keep destination docs
+          class Foo
+          end
+        RBS
+      end
+
+      it "preserves destination declaration-leading comments when template content wins" do
+        merger = described_class.new(commented_template, commented_destination, preference: :template)
+
+        expect(merger.merge).to eq(<<~RBS)
+          # keep destination docs
+          class Foo
+          end
+        RBS
+      end
+    end
+
+    context "when the matched declaration is an alias" do
+      let(:commented_template) do
+        <<~RBS
+          class Foo = Bar
+        RBS
+      end
+
+      let(:commented_destination) do
+        <<~RBS
+          # keep alias docs
+          class Foo = Baz
+        RBS
+      end
+
+      it "preserves destination declaration-leading comments for matched aliases when template content wins" do
+        merger = described_class.new(commented_template, commented_destination, preference: :template)
+
+        expect(merger.merge).to eq(<<~RBS)
+          # keep alias docs
+          class Foo = Bar
+        RBS
+      end
+    end
+
+    context "when the template already owns declaration-leading docs" do
+      let(:commented_template) do
+        <<~RBS
+          # template docs
+          class Foo
+          end
+        RBS
+      end
+
+      let(:commented_destination) do
+        <<~RBS
+          # destination docs
+          class Foo
+          end
+        RBS
+      end
+
+      it "keeps template declaration-leading comments" do
+        merger = described_class.new(commented_template, commented_destination, preference: :template)
+
+        expect(merger.merge).to eq(commented_template)
+      end
+    end
+
+    context "when a later matched declaration owns blank-line-separated destination docs" do
+      let(:commented_template) do
+        <<~RBS
+          class One
+          end
+
+          class Two
+          end
+        RBS
+      end
+
+      let(:commented_destination) do
+        <<~RBS
+          class One
+          end
+
+          # keep second declaration docs
+          class Two
+          end
+        RBS
+      end
+
+      it "preserves blank-line-separated destination docs for adjacent declarations when template content wins" do
+        merger = described_class.new(commented_template, commented_destination, preference: :template)
+
+        expect(merger.merge).to eq(<<~RBS)
+          class One
+          end
+
+          # keep second declaration docs
+          class Two
+          end
+        RBS
+      end
+    end
+  end
+
+  shared_examples "removed destination declaration comment preservation" do
+    context "when removal is enabled and the destination has an extra documented declaration" do
+      let(:template_without_extra) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:destination_with_extra) do
+        <<~RBS
+          class Foo
+          end
+
+          # keep removed declaration docs
+          class Legacy
+          end
+        RBS
+      end
+
+      it "promotes the removed declaration's leading comments without keeping the declaration body" do
+        merger = described_class.new(
+          template_without_extra,
+          destination_with_extra,
+          remove_template_missing_nodes: true,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class Foo
+          end
+
+          # keep removed declaration docs
+        RBS
+      end
+    end
+
+    context "when removal is enabled for a later blank-line-separated documented declaration" do
+      let(:template_without_extra) do
+        <<~RBS
+          class One
+          end
+        RBS
+      end
+
+      let(:destination_with_extra) do
+        <<~RBS
+          class One
+          end
+
+          # keep removed second declaration docs
+          class Two
+          end
+        RBS
+      end
+
+      it "promotes adjacent removed declaration docs while preserving the separating blank line" do
+        merger = described_class.new(
+          template_without_extra,
+          destination_with_extra,
+          remove_template_missing_nodes: true,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class One
+          end
+
+          # keep removed second declaration docs
+        RBS
+      end
+    end
+  end
+
+  shared_examples "document boundary comment preservation" do
+    context "when the destination has postlude comments after matched declarations" do
+      let(:commented_template) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:commented_destination) do
+        <<~RBS
+          class Foo
+          end
+
+          # keep footer docs
+        RBS
+      end
+
+      it "preserves destination postlude comments" do
+        merger = described_class.new(commented_template, commented_destination)
+
+        expect(merger.merge).to eq(<<~RBS)
+          class Foo
+          end
+
+          # keep footer docs
+        RBS
+      end
+    end
+
+    context "when the destination is comment-only" do
+      let(:commented_template) do
+        <<~RBS
+          class Foo
+          end
+        RBS
+      end
+
+      let(:comment_only_destination) do
+        <<~RBS
+          # only docs
+          # still docs
+        RBS
+      end
+
+      it "preserves the comment-only destination" do
+        merger = described_class.new(commented_template, comment_only_destination)
+
+        expect(merger.merge).to eq(comment_only_destination)
+      end
+    end
+  end
+
+  shared_examples "recursive member merge parity" do
+    context "when template preference merges matched container members" do
+      let(:template_members) do
+        <<~RBS
+          class MyClass
+            def shared: () -> String
+            def template_only: () -> Integer
+          end
+        RBS
+      end
+
+      let(:destination_members) do
+        <<~RBS
+          class MyClass
+            def shared: () -> Symbol
+            def dest_only: () -> bool
+          end
+        RBS
+      end
+
+      it "keeps destination-only members while applying template-preferred shared and template-only members" do
+        merger = described_class.new(
+          template_members,
+          destination_members,
+          preference: :template,
+          add_template_only_nodes: true,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class MyClass
+            def shared: () -> String
+            def dest_only: () -> bool
+            def template_only: () -> Integer
+          end
+        RBS
+      end
+    end
+  end
+
+  shared_examples "recursive member comment preservation" do
+    context "when a matched nested member owns destination-leading docs" do
+      let(:template_members) do
+        <<~RBS
+          class MyClass
+            def shared: () -> String
+          end
+        RBS
+      end
+
+      let(:destination_members) do
+        <<~RBS
+          class MyClass
+            # keep shared docs
+            def shared: () -> Symbol
+          end
+        RBS
+      end
+
+      it "preserves destination-leading docs for the matched member when template content wins" do
+        merger = described_class.new(
+          template_members,
+          destination_members,
+          preference: :template,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class MyClass
+            # keep shared docs
+            def shared: () -> String
+          end
+        RBS
+      end
+    end
+  end
+
+  shared_examples "recursive empty preferred container parity" do
+    context "when the preferred matched container is empty and destination owns nested members" do
+      let(:template_members) do
+        <<~RBS
+          class MyClass
+          end
+        RBS
+      end
+
+      let(:destination_members) do
+        <<~RBS
+          class MyClass
+            def dest_only: () -> bool
+          end
+        RBS
+      end
+
+      it "keeps destination-only nested members inside the preferred declaration shell" do
+        merger = described_class.new(
+          template_members,
+          destination_members,
+          preference: :template,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class MyClass
+            def dest_only: () -> bool
+          end
+        RBS
+      end
+    end
+  end
+
+  shared_examples "recursive template-only member parity" do
+    context "when destination preference keeps a matched container with no nested members" do
+      let(:template_members) do
+        <<~RBS
+          class MyClass
+            def template_only: () -> Integer
+          end
+        RBS
+      end
+
+      let(:destination_members) do
+        <<~RBS
+          class MyClass
+          end
+        RBS
+      end
+
+      it "does not leak template-only nested members when add_template_only_nodes is disabled" do
+        merger = described_class.new(
+          template_members,
+          destination_members,
+          preference: :destination,
+          add_template_only_nodes: false,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class MyClass
+          end
+        RBS
+      end
+
+      it "inserts template-only nested members into the empty preferred shell when add_template_only_nodes is enabled" do
+        merger = described_class.new(
+          template_members,
+          destination_members,
+          preference: :destination,
+          add_template_only_nodes: true,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class MyClass
+            def template_only: () -> Integer
+          end
+        RBS
+      end
+    end
+
+    context "when destination preference keeps existing nested members" do
+      let(:template_members) do
+        <<~RBS
+          class MyClass
+            # keep template docs
+            def template_only: () -> Integer
+          end
+        RBS
+      end
+
+      let(:destination_members) do
+        <<~RBS
+          class MyClass
+            def dest_only: () -> bool
+          end
+        RBS
+      end
+
+      it "appends documented template-only nested members after destination-owned members when enabled" do
+        merger = described_class.new(
+          template_members,
+          destination_members,
+          preference: :destination,
+          add_template_only_nodes: true,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          class MyClass
+            def dest_only: () -> bool
+            # keep template docs
+            def template_only: () -> Integer
+          end
+        RBS
+      end
+    end
+  end
+
+  shared_examples "recursive overloaded member merge parity" do
+    context "when matched container members include reordered overloads" do
+      let(:template_members) do
+        <<~RBS
+          interface _Foo
+            def foo: () -> String
+            def foo: (Integer) -> String
+            def template_only: () -> Integer
+          end
+        RBS
+      end
+
+      let(:destination_members) do
+        <<~RBS
+          interface _Foo
+            def foo: (String) -> Symbol
+            def foo: () -> Symbol
+            def dest_only: () -> bool
+          end
+        RBS
+      end
+
+      it "matches overloads by callable shape instead of only method name and order" do
+        merger = described_class.new(
+          template_members,
+          destination_members,
+          preference: :template,
+          add_template_only_nodes: true,
+        )
+
+        expect(merger.merge).to eq(<<~RBS)
+          interface _Foo
+            def foo: (String) -> Symbol
+            def foo: () -> String
+            def dest_only: () -> bool
+            def foo: (Integer) -> String
+            def template_only: () -> Integer
+          end
+        RBS
+      end
+    end
   end
 
   # ============================================================
@@ -203,6 +1027,14 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "merge with identical files"
       it_behaves_like "merge with added declarations"
       it_behaves_like "merge with freeze blocks"
+      it_behaves_like "template-preferred declaration-leading comment fallback"
+      it_behaves_like "removed destination declaration comment preservation"
+      it_behaves_like "document boundary comment preservation"
+      it_behaves_like "recursive member merge parity"
+      it_behaves_like "recursive member comment preservation"
+      it_behaves_like "recursive empty preferred container parity"
+      it_behaves_like "recursive template-only member parity"
+      it_behaves_like "recursive overloaded member merge parity"
     end
   end
 
@@ -233,6 +1065,14 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "merge with identical files"
       it_behaves_like "merge with added declarations"
       it_behaves_like "merge with freeze blocks"
+      it_behaves_like "template-preferred declaration-leading comment fallback"
+      it_behaves_like "removed destination declaration comment preservation"
+      it_behaves_like "document boundary comment preservation"
+      it_behaves_like "recursive member merge parity"
+      it_behaves_like "recursive member comment preservation"
+      it_behaves_like "recursive empty preferred container parity"
+      it_behaves_like "recursive template-only member parity"
+      it_behaves_like "recursive overloaded member merge parity"
     end
   end
 
@@ -263,11 +1103,19 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "merge with identical files"
       it_behaves_like "merge with added declarations"
       it_behaves_like "merge with freeze blocks"
+      it_behaves_like "template-preferred declaration-leading comment fallback"
+      it_behaves_like "removed destination declaration comment preservation"
+      it_behaves_like "document boundary comment preservation"
+      it_behaves_like "recursive member merge parity"
+      it_behaves_like "recursive member comment preservation"
+      it_behaves_like "recursive empty preferred container parity"
+      it_behaves_like "recursive template-only member parity"
+      it_behaves_like "recursive overloaded member merge parity"
     end
   end
 
   # ============================================================
-  # Explicit Java backend tests (JRuby)
+  # Explicit Java backend tests
   # ============================================================
 
   context "with explicit Java backend", :java_backend, :rbs_grammar do
@@ -293,6 +1141,14 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "merge with identical files"
       it_behaves_like "merge with added declarations"
       it_behaves_like "merge with freeze blocks"
+      it_behaves_like "template-preferred declaration-leading comment fallback"
+      it_behaves_like "removed destination declaration comment preservation"
+      it_behaves_like "document boundary comment preservation"
+      it_behaves_like "recursive member merge parity"
+      it_behaves_like "recursive member comment preservation"
+      it_behaves_like "recursive empty preferred container parity"
+      it_behaves_like "recursive template-only member parity"
+      it_behaves_like "recursive overloaded member merge parity"
     end
   end
 
@@ -323,6 +1179,14 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "merge with identical files"
       it_behaves_like "merge with added declarations"
       it_behaves_like "merge with freeze blocks"
+      it_behaves_like "template-preferred declaration-leading comment fallback"
+      it_behaves_like "removed destination declaration comment preservation"
+      it_behaves_like "document boundary comment preservation"
+      it_behaves_like "recursive member merge parity"
+      it_behaves_like "recursive member comment preservation"
+      it_behaves_like "recursive empty preferred container parity"
+      it_behaves_like "recursive template-only member parity"
+      it_behaves_like "recursive overloaded member merge parity"
     end
   end
 
@@ -353,6 +1217,14 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "merge with identical files"
       it_behaves_like "merge with added declarations"
       it_behaves_like "merge with freeze blocks"
+      it_behaves_like "template-preferred declaration-leading comment fallback"
+      it_behaves_like "removed destination declaration comment preservation"
+      it_behaves_like "document boundary comment preservation"
+      it_behaves_like "recursive member merge parity"
+      it_behaves_like "recursive member comment preservation"
+      it_behaves_like "recursive empty preferred container parity"
+      it_behaves_like "recursive template-only member parity"
+      it_behaves_like "recursive overloaded member merge parity"
     end
   end
 end

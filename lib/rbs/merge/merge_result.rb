@@ -42,17 +42,23 @@ module Rbs
       # @param options [Hash] Additional options for forward compatibility
       def initialize(template_analysis, dest_analysis, **options)
         super(template_analysis: template_analysis, dest_analysis: dest_analysis, **options)
+        @emitted_freeze_blocks = {}
       end
 
       # Add content from the template at the given statement index
       # @param index [Integer] Statement index in template
       # @param decision [Symbol] Decision type (default: DECISION_TEMPLATE)
       # @return [void]
-      def add_from_template(index, decision: DECISION_TEMPLATE)
+      def add_from_template(index, decision: DECISION_TEMPLATE, comment_source_statement: nil, comment_source_analysis: nil)
         statement = @template_analysis.statements[index]
         return unless statement
 
-        lines = extract_lines(statement, @template_analysis)
+        lines = extract_lines(
+          statement,
+          @template_analysis,
+          comment_source_statement: comment_source_statement,
+          comment_source_analysis: comment_source_analysis,
+        )
         @lines.concat(lines)
         @decisions << {decision: decision, source: :template, index: index, lines: lines.length}
       end
@@ -61,11 +67,16 @@ module Rbs
       # @param index [Integer] Statement index in destination
       # @param decision [Symbol] Decision type (default: DECISION_DESTINATION)
       # @return [void]
-      def add_from_destination(index, decision: DECISION_DESTINATION)
+      def add_from_destination(index, decision: DECISION_DESTINATION, comment_source_statement: nil, comment_source_analysis: nil)
         statement = @dest_analysis.statements[index]
         return unless statement
 
-        lines = extract_lines(statement, @dest_analysis)
+        lines = extract_lines(
+          statement,
+          @dest_analysis,
+          comment_source_statement: comment_source_statement,
+          comment_source_analysis: comment_source_analysis,
+        )
         @lines.concat(lines)
         @decisions << {decision: decision, source: :destination, index: index, lines: lines.length}
       end
@@ -77,10 +88,12 @@ module Rbs
         # Use the freeze_node's own analysis to get the correct content
         # (template freeze blocks should use template lines, dest freeze blocks use dest lines)
         source_analysis = freeze_node.analysis
-        lines = (freeze_node.start_line..freeze_node.end_line).map do |ln|
-          source_analysis.line_at(ln)
-        end
+        freeze_key = [source_analysis.object_id, freeze_node.start_line, freeze_node.end_line]
+        return if @emitted_freeze_blocks[freeze_key]
+
+        lines = extract_lines(freeze_node, source_analysis)
         @lines.concat(lines)
+        @emitted_freeze_blocks[freeze_key] = true
 
         # Determine source based on which analysis the freeze_node belongs to
         source = (source_analysis == @template_analysis) ? :template : :destination
@@ -158,24 +171,81 @@ module Rbs
       # @param statement [Object] The statement (declaration, member, FreezeNode, or NodeWrapper)
       # @param analysis [FileAnalysis] The file analysis
       # @return [Array<String>] Lines for the statement
-      def extract_lines(statement, analysis)
-        if statement.is_a?(FreezeNode)
-          (statement.start_line..statement.end_line).map { |ln| analysis.line_at(ln) }
-        else
-          # Support both NodeWrapper (has start_line/end_line) and RBS gem nodes (has location)
-          start_line = get_start_line(statement)
-          end_line = get_end_line(statement)
+      def extract_lines(statement, analysis, comment_source_statement: nil, comment_source_analysis: nil)
+        # Support NodeWrapper, FreezeNode, and raw RBS nodes via shared start/end APIs.
+        start_line = get_start_line(statement)
+        end_line = get_end_line(statement)
 
-          return [] unless start_line && end_line
+        return [] unless start_line && end_line
 
-          # Include leading comment if present (RBS gem nodes only)
-          if statement.respond_to?(:comment) && statement.comment
-            comment_start = statement.comment.location&.start_line
-            start_line = comment_start if comment_start && comment_start < start_line
+        leading_region, leading_analysis, leading_statement = preferred_leading_region(
+          statement,
+          analysis,
+          comment_source_statement: comment_source_statement,
+          comment_source_analysis: comment_source_analysis,
+        )
+        if leading_region && leading_statement
+          region_start = region_start_line(leading_region)
+          source_start = get_start_line(leading_statement)
+
+          if region_start && source_start && region_start < source_start
+            leading_start = preceding_blank_line_start(region_start, leading_analysis)
+            leading_lines = (leading_start...source_start).filter_map { |ln| leading_analysis.line_at(ln) }
+            body_lines = (start_line..end_line).map { |ln| analysis.line_at(ln) }
+            return leading_lines + body_lines
           end
-
-          (start_line..end_line).map { |ln| analysis.line_at(ln) }
+        elsif statement.respond_to?(:comment) && statement.comment
+          comment_start = statement.comment.location&.start_line
+          start_line = comment_start if comment_start && comment_start < start_line
         end
+
+        (start_line..end_line).map { |ln| analysis.line_at(ln) }
+      end
+
+      def preferred_leading_region(statement, analysis, comment_source_statement: nil, comment_source_analysis: nil)
+        primary_region = leading_region_for(statement, analysis)
+        return [primary_region, analysis, statement] if region_present?(primary_region)
+
+        if comment_source_statement && comment_source_analysis
+          source_region = leading_region_for(comment_source_statement, comment_source_analysis)
+          return [source_region, comment_source_analysis, comment_source_statement] if region_present?(source_region)
+        end
+
+        [nil, analysis, statement]
+      end
+
+      def leading_region_for(statement, analysis)
+        return unless statement && analysis && analysis.respond_to?(:comment_attachment_for)
+
+        attachment = analysis.comment_attachment_for(statement)
+        attachment.leading_region if attachment.respond_to?(:leading_region)
+      end
+
+      def region_present?(region)
+        return false unless region
+        return !region.empty? if region.respond_to?(:empty?)
+        return region.nodes.any? if region.respond_to?(:nodes)
+
+        true
+      end
+
+      def region_start_line(region)
+        return region.start_line if region.respond_to?(:start_line) && region.start_line
+        return unless region.respond_to?(:nodes)
+
+        region.nodes.filter_map { |node| node.respond_to?(:line_number) ? node.line_number : nil }.min
+      end
+
+      def preceding_blank_line_start(region_start, analysis)
+        line_num = region_start
+        while line_num > 1
+          previous_line = analysis.line_at(line_num - 1)
+          break unless previous_line && previous_line.strip.empty?
+
+          line_num -= 1
+        end
+
+        line_num
       end
 
       # Get start line for a statement (works with both backends)

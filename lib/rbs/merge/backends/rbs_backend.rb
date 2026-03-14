@@ -6,8 +6,7 @@ module Rbs
       # RBS gem backend using Ruby's official RBS parser
       #
       # This backend wraps the RBS gem, Ruby's official type signature parser.
-      # Unlike tree-sitter backends which are language-agnostic runtime parsers,
-      # the RBS gem is specifically designed for parsing RBS type signature files.
+      # The RBS gem is specifically designed for parsing RBS type signature files.
       #
       # The RBS gem provides:
       # - Rich AST with declaration types (Class, Module, Interface, TypeAlias, etc.)
@@ -40,7 +39,6 @@ module Rbs
           # Check if the RBS backend is available
           #
           # Attempts to require rbs on first call and caches the result.
-          # The RBS gem only works on MRI Ruby (C extension).
           #
           # @return [Boolean] true if rbs gem is available
           # @example
@@ -96,8 +94,8 @@ module Rbs
 
         # RBS language wrapper
         #
-        # The RBS gem only parses RBS type signature files. This class exists
-        # for API compatibility with other TreeHaver backends.
+        # The RBS gem only parses RBS type signature files.
+        # This wrapper satisfies the current TreeHaver language contract.
         #
         # @example
         #   language = Rbs::Merge::Backends::RbsBackend::Language.rbs
@@ -126,11 +124,10 @@ module Rbs
               new(:rbs, options: options)
             end
 
-            # Load language from library path (API compatibility)
+            # Load language from a grammar path.
             #
             # RBS gem only supports RBS, so path and symbol parameters are ignored.
-            # This method exists for API consistency with tree-sitter backends,
-            # allowing `TreeHaver.parser_for(:rbs)` to work regardless of backend.
+            # This keeps the backend aligned with TreeHaver's language API.
             #
             # @param _path [String] Ignored - RBS gem doesn't load external grammars
             # @param symbol [String, nil] Ignored
@@ -156,7 +153,7 @@ module Rbs
 
         # RBS parser wrapper
         #
-        # Wraps the RBS gem parser to provide a TreeHaver-compatible API.
+        # Wraps the RBS gem parser behind the current TreeHaver parser API.
         class Parser < ::TreeHaver::Base::Parser
           # Create a new RBS parser instance
           #
@@ -206,7 +203,7 @@ module Rbs
 
         # RBS tree wrapper
         #
-        # Wraps RBS parse results to provide tree-sitter-compatible API.
+        # Wraps RBS parse results behind the current TreeHaver tree API.
         #
         # @api private
         class Tree < ::TreeHaver::Base::Tree
@@ -253,7 +250,7 @@ module Rbs
 
         # RBS node wrapper
         #
-        # Wraps RBS AST nodes to provide tree-sitter-compatible node API.
+        # Wraps RBS AST nodes behind the current TreeHaver node API.
         #
         # RBS nodes provide:
         # - Various declaration types (Class, Module, Interface, TypeAlias, etc.)
@@ -323,7 +320,7 @@ module Rbs
             end
           end
 
-          # Alias for tree-sitter compatibility
+          # Alias for the TreeHaver node contract
           alias_method :kind, :type
 
           # Get byte offset where the node starts

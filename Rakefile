@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # kettle-dev Rakefile v1.1.60 - 2025-11-23
-# Ruby 2.3 (Safe Navigation) or higher required
+# Generated project Rake tasks
 #
 # MIT License (see License.txt)
 #
@@ -16,7 +16,7 @@
 # rake appraisal:update                       # Update Appraisal gemfiles and run RuboCop...
 # rake bench                                  # Run all benchmarks (alias for bench:run)
 # rake bench:list                             # List available benchmark scripts
-# rake bench:run                              # Run all benchmark scripts (skips on CI)
+# rake bench:run                              # Run all benchmark scripts
 # rake build:generate_checksums               # Generate both SHA256 & SHA512 checksums i...
 # rake bundle:audit:check                     # Checks the Gemfile.lock for insecure depe...
 # rake bundle:audit:update                    # Updates the bundler-audit vulnerability d...

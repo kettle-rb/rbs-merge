@@ -20,34 +20,93 @@
 
 **CRITICAL**: The canonical project environment now lives in `mise.toml`, with local overrides in `.env.local` loaded via `dotenvy`.
 
+⚠️ **Watch for trust prompts**: After editing `mise.toml` or `.env.local`, `mise` may require trust to be refreshed before commands can load the project environment. That interactive trust screen can masquerade as missing terminal output, so commands may appear hung or silent until you handle it.
+
+**Recovery rule**: If a `mise exec` command in this repo goes silent, appears hung, or terminal polling stops returning useful output, assume `mise trust` is needed first and recover with:
+
+```bash
+mise trust -C /home/pboling/src/kettle-rb/rbs-merge
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- bundle exec rspec
+```
+
+Do this before spending time on unrelated debugging; in this workspace, silent `mise` commands are usually a trust problem.
+
+```bash
+mise trust -C /home/pboling/src/kettle-rb/rbs-merge
+```
+
+### Local sibling-development mode is the ONLY supported mode
+
+**CRITICAL**: `rbs-merge` evolves in lockstep with its sibling repositories under `/home/pboling/src/kettle-rb`.
+
+- Support **only** local sibling-development mode.
+- Do **not** add or preserve code paths for released gems, vendored gems, older sibling APIs, or compatibility shims.
+- Do **not** test or validate in any non-sibling mode.
+- If a sibling API changes, update `rbs-merge` to match the current sibling code instead of adding fallback logic.
+
 ✅ **CORRECT**:
 ```bash
-mise exec -C /home/pboling/src/kettle-rb/ast-merge/vendor/rbs-merge -- bundle exec rspec
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- bundle exec rspec
 ```
 
 ✅ **CORRECT**:
 ```bash
-eval "$(mise env -C /home/pboling/src/kettle-rb/ast-merge/vendor/rbs-merge -s bash)" && bundle exec rspec
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- bundle exec rake magic
 ```
 
 ❌ **WRONG**:
 ```bash
-cd /home/pboling/src/kettle-rb/ast-merge/vendor/rbs-merge
-bundle exec rspec
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- env KETTLE_RB_DEV=false bundle exec rspec
 ```
 
 ❌ **WRONG**:
 ```bash
-cd /home/pboling/src/kettle-rb/ast-merge/vendor/rbs-merge && bundle exec rspec
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- bundle exec rspec  # after adding fallback code for old dependencies
 ```
 
 ### Prefer Internal Tools Over Terminal
 
 Use `read_file`, `list_dir`, `grep_search`, `file_search` instead of terminal commands for gathering information. Only use terminal for running tests, installing dependencies, and git operations.
 
-### grep_search Cannot Search Nested Git Projects
+### Workspace layout
 
-This project is a nested git project inside the `ast-merge` workspace. The `grep_search` tool **cannot** search inside it. Use `read_file` and `list_dir` instead.
+This repo is a sibling project inside the `/home/pboling/src/kettle-rb` workspace. Resolve dependencies from sibling repositories, not from `vendor/` and not from released gems.
+
+### Local `examples/` scripts should use `nomono`
+
+For `bundler/inline` scripts under `examples/`, follow the same local sibling wiring pattern as `gemfiles/modular/*_local.gemfile`:
+
+- set `KETTLE_RB_DEV` to the sibling workspace root unless the caller already set it
+- `require` `nomono/lib/nomono/bundler` from the local workspace
+- use `eval_nomono_gems(...)` for sibling gems such as `ast-merge`, `tree_haver`, and `rbs-merge`
+- keep parser/runtime gems like `rbs`, `ffi`, or `ruby_tree_sitter` explicit in the inline Gemfile
+- do **not** hardcode `vendor/*` paths or brittle relative guesses like `../../..`
+
+Recommended pattern:
+
+```ruby
+WORKSPACE_ROOT = File.expand_path("../..", __dir__)
+ENV["KETTLE_RB_DEV"] = WORKSPACE_ROOT unless ENV.key?("KETTLE_RB_DEV")
+
+require "bundler/inline"
+
+gemfile do
+  source "https://gem.coop"
+  require File.expand_path("nomono/lib/nomono/bundler", WORKSPACE_ROOT)
+
+  gem "benchmark"
+  gem "rbs"
+
+  eval_nomono_gems(
+    gems: %w[ast-merge tree_haver rbs-merge],
+    prefix: "KETTLE_RB",
+    path_env: "KETTLE_RB_DEV",
+    vendored_gems_env: "VENDORED_GEMS",
+    vendor_gem_dir_env: "VENDOR_GEM_DIR",
+    debug_env: "KETTLE_DEV_DEBUG"
+  )
+end
+```
 
 ### NEVER Pipe Test Commands Through head/tail
 
@@ -108,22 +167,31 @@ spec/rbs/merge/
 
 ```bash
 # Full suite
-mise exec -C /home/pboling/src/kettle-rb/ast-merge/vendor/rbs-merge -- bundle exec rspec
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- bundle exec rspec
 
 # Single file (disable coverage threshold check)
-mise exec -C /home/pboling/src/kettle-rb/ast-merge/vendor/rbs-merge -- env K_SOUP_COV_MIN_HARD=false bundle exec rspec spec/rbs/merge/smart_merger_spec.rb
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- env K_SOUP_COV_MIN_HARD=false bundle exec rspec spec/rbs/merge/smart_merger_spec.rb
 
-# RBS backend tests
-mise exec -C /home/pboling/src/kettle-rb/ast-merge/vendor/rbs-merge -- bundle exec rspec --tag rbs_backend
-mise exec -C /home/pboling/src/kettle-rb/ast-merge/vendor/rbs-merge -- bundle exec rspec --tag rbs_grammar
+# Split-suite validation in local sibling mode
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- bin/rspec-ffi
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- bundle exec rake remaining_specs
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- bundle exec rake magic
 ```
 
 ### Coverage Reports
 
 ```bash
-mise exec -C /home/pboling/src/kettle-rb/ast-merge/vendor/rbs-merge -- bin/rake coverage
-mise exec -C /home/pboling/src/kettle-rb/ast-merge/vendor/rbs-merge -- bin/kettle-soup-cover -d
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- bin/rake coverage
+mise exec -C /home/pboling/src/kettle-rb/rbs-merge -- bin/kettle-soup-cover -d
 ```
+
+## 🚫 No backward compatibility policy
+
+1. Do **not** add `defined?` guards, fallback `Struct`s, or dual old/new API branches for sibling libraries.
+2. Do **not** keep release-mode or vendored-mode Gemfile branches.
+3. Do **not** preserve dead compatibility comments or instructions that reference old layouts.
+4. When behavior differs between current sibling code and an older release, follow the current sibling code and update tests accordingly.
+5. If a helper from `ast-merge`, `tree_haver`, `kettle-dev`, `kettle-test`, or `kettle-soup-cover` is required, depend on the current sibling implementation directly.
 
 ## 📝 Project Conventions
 
@@ -199,7 +267,7 @@ end
 
 1. **RBS requires MRI**: Does not work on JRuby or TruffleRuby
 2. **NEVER use manual skip checks** – Use dependency tags (`:rbs_backend`, `:rbs_grammar`)
-3. **Do NOT load vendor gems** – They are not part of this project; they do not exist in CI
+3. **Do NOT add vendor/release fallback paths** – local sibling repositories are the only supported dependency source
 4. **Use `tmp/` for temporary files** – Never use `/tmp` or other system directories
 5. **Do NOT expect `cd` to persist** – Every terminal command is isolated; use a self-contained `mise exec -C ... -- ...` invocation.
 6. **Do NOT rely on prior shell state** – Previous `cd`, `export`, aliases, and functions are not available to the next command.

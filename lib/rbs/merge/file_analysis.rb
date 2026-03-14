@@ -42,12 +42,15 @@ module Rbs
       # @return [Array] Raw declarations from parser
       attr_reader :declarations
 
+      # @return [CommentTracker] Comment tracker for this file
+      attr_reader :comment_tracker
+
       # Initialize file analysis
       #
       # @param source [String] RBS source code to analyze
       # @param freeze_token [String] Token for freeze block markers (default: "rbs-merge")
       # @param signature_generator [Proc, nil] Custom signature generator
-      # @param options [Hash] Additional options (forward compatibility)
+      # @param options [Hash] Additional options
       #
       # @note Backend selection is handled by TreeHaver. To force a specific backend:
       #   - Use TreeHaver.with_backend(:mri) { ... } for tree-sitter via MRI
@@ -63,6 +66,7 @@ module Rbs
         @directives = []
         @declarations = []
         @ast = nil
+        @comment_tracker = CommentTracker.new(@lines, freeze_token: freeze_token)
 
         # Parse the RBS source
         DebugLogger.time("FileAnalysis#parse") { parse_rbs }
@@ -86,6 +90,63 @@ module Rbs
         return false unless @errors.empty?
 
         !@ast.nil? || @declarations.any?
+      end
+
+      # Get shared comment capability information for this analysis.
+      #
+      # @return [Object]
+      def comment_capability
+        @comment_capability ||= comment_tracker.augment(owners: []).capability
+      end
+
+      # Get all tracked comments converted to shared comment nodes.
+      #
+      # @return [Array]
+      def comment_nodes
+        comment_tracker.comment_nodes
+      end
+
+      # Get a shared comment node at a specific line.
+      #
+      # @param line_num [Integer] 1-based line number
+      # @return [Object, nil]
+      def comment_node_at(line_num)
+        comment_tracker.comment_node_at(line_num)
+      end
+
+      # Get comments in a line range converted to a shared comment region.
+      #
+      # @param range [Range] Range of 1-based line numbers
+      # @param kind [Symbol] Region kind
+      # @param full_line_only [Boolean] Whether to keep only full-line comments
+      # @return [Object]
+      def comment_region_for_range(range, kind:, full_line_only: false)
+        comment_tracker.comment_region_for_range(
+          range,
+          kind: kind,
+          full_line_only: full_line_only,
+        )
+      end
+
+      # Build a passive shared comment attachment for an owner.
+      #
+      # @param owner [Object] Structural owner for the attachment
+      # @param options [Hash] Additional metadata / lookup overrides
+      # @return [Object]
+      def comment_attachment_for(owner, **options)
+        comment_tracker.comment_attachment_for(owner, **options)
+      end
+
+      # Build a passive shared comment augmenter for this analysis.
+      #
+      # @param owners [Array<#start_line,#end_line>, nil] Owners used for attachment inference
+      # @param options [Hash] Additional augmenter options
+      # @return [Object]
+      def comment_augmenter(owners: nil, **options)
+        comment_tracker.augment(
+          owners: owners || comment_augmenter_default_owners,
+          **options
+        )
       end
 
       # Get all statements (declarations outside freeze blocks + FreezeNodes)
@@ -123,8 +184,11 @@ module Rbs
         when NodeWrapper
           node.signature
         else
-          # For raw TreeHaver::Node (tree-sitter) or RBS gem nodes
-          if @backend == :tree_sitter || node.respond_to?(:type)
+          # Raw declarations/members from the RBS gem frequently respond to #type
+          # as part of their own AST API, so backend selection must stay authoritative
+          # here. Otherwise frozen contained RBS declarations are misrouted through the
+          # tree-sitter signature path and become unmatchable.
+          if @backend == :tree_sitter && node.respond_to?(:type)
             compute_tree_sitter_signature(node)
           else
             compute_rbs_gem_signature(node)
@@ -155,6 +219,10 @@ module Rbs
           [:constant, name || "anonymous"]
         when :global
           [:global, name || "anonymous"]
+        when :class_alias
+          [:class_alias, name || "anonymous"]
+        when :module_alias
+          [:module_alias, name || "anonymous"]
         when :method
           [:method, name || "anonymous"]
         else
@@ -216,12 +284,16 @@ module Rbs
 
       private
 
+      def comment_augmenter_default_owners
+        @comment_augmenter_default_owners ||= @statements.select do |statement|
+          statement.respond_to?(:start_line) && statement.respond_to?(:end_line)
+        end
+      end
+
       def parse_rbs
         # Use TreeHaver to get the appropriate parser
-        # TreeHaver handles backend selection automatically:
-        # - On MRI with RBS gem: uses Rbs::Merge::Backends::RbsBackend
-        # - On JRuby or without RBS gem: uses tree-sitter-rbs via native backend
-        # - Respects TreeHaver.with_backend() and TREE_HAVER_BACKEND env var
+        # TreeHaver handles backend selection automatically for the current
+        # sibling-development environment and respects explicit backend overrides.
         parser = TreeHaver.parser_for(:rbs)
         result = parser.parse(@source)
 
@@ -304,7 +376,7 @@ module Rbs
               next if %w[end class module interface type def].include?(inner_type)
 
               canonical = NodeTypeNormalizer.canonical_type(inner.type, :tree_sitter)
-              if %i[class module interface type_alias constant global].include?(canonical)
+              if %i[class module interface type_alias constant global class_alias module_alias].include?(canonical)
                 @declarations << inner
                 break  # Only one actual declaration per `decl` wrapper
               end
@@ -312,7 +384,7 @@ module Rbs
           else
             # Direct declaration (shouldn't happen based on grammar, but handle it)
             canonical = NodeTypeNormalizer.canonical_type(child.type, :tree_sitter)
-            if %i[class module interface type_alias constant global].include?(canonical)
+            if %i[class module interface type_alias constant global class_alias module_alias].include?(canonical)
               @declarations << child
             end
           end
@@ -478,7 +550,7 @@ module Rbs
         result.sort_by { |node| node.start_line || 0 }
       end
 
-      # Compute signature for RBS gem node (legacy support)
+      # Compute signature for an RBS gem node
       def compute_rbs_gem_signature(node)
         return unless @backend == :rbs && defined?(::RBS::AST)
 
@@ -495,6 +567,10 @@ module Rbs
           [:constant, node.name.to_s]
         when ::RBS::AST::Declarations::Global
           [:global, node.name.to_s]
+        when ::RBS::AST::Declarations::ClassAlias
+          [:class_alias, node.new_name.to_s]
+        when ::RBS::AST::Declarations::ModuleAlias
+          [:module_alias, node.new_name.to_s]
         when ::RBS::AST::Members::MethodDefinition
           [:method, node.name.to_s, node.kind]
         when ::RBS::AST::Members::Alias

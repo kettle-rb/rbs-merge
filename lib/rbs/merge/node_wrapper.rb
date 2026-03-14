@@ -72,7 +72,7 @@ module Rbs
       # Get the canonical (normalized) type for this node
       # @return [Symbol]
       def canonical_type
-        NodeTypeNormalizer.canonical_type(type, @backend)
+        NodeTypeNormalizer.canonical_type_for_node(@node, @backend)
       end
 
       # Check if this node has a specific type (checks both raw and canonical)
@@ -86,6 +86,8 @@ module Rbs
       # Get the name of this declaration/member
       # @return [String, nil]
       def name
+        return visibility_kind.to_s if visibility_kind
+
         if @backend == :rbs
           extract_rbs_name
         else
@@ -211,6 +213,12 @@ module Rbs
         canonical_type == :cvar
       end
 
+      # Check if this is a visibility member
+      # @return [Boolean]
+      def visibility?
+        canonical_type == :visibility
+      end
+
       # Check if this is a declaration (class, module, interface, etc.)
       # @return [Boolean]
       def declaration?
@@ -254,6 +262,19 @@ module Rbs
       # Get source text for this node
       # @return [String, nil]
       def text
+        if @source
+          if @backend == :rbs
+            location = @node.respond_to?(:location) ? @node.location : nil
+            if location&.start_pos && location&.end_pos
+              exact = @source.byteslice(location.start_pos...location.end_pos)
+              return exact unless exact.nil?
+            end
+          elsif @node.respond_to?(:start_byte) && @node.respond_to?(:end_byte)
+            exact = @source.byteslice(@node.start_byte...@node.end_byte)
+            return exact unless exact.nil?
+          end
+        end
+
         return unless start_line && end_line
 
         if @lines && start_line > 0 && end_line <= @lines.length
@@ -291,6 +312,10 @@ module Rbs
           [:constant, name]
         when :global
           [:global, name]
+        when :class_alias
+          [:class_alias, name]
+        when :module_alias
+          [:module_alias, name]
         when :method
           kind = method_kind
           [:method, name, kind]
@@ -314,6 +339,8 @@ module Rbs
           [:civar, name]
         when :cvar
           [:cvar, name]
+        when :visibility
+          [:visibility, visibility_kind]
         else
           [:unknown, canonical_type, start_line]
         end
@@ -327,13 +354,13 @@ module Rbs
         if @backend == :rbs
           @node.respond_to?(:kind) ? @node.kind : :instance
         else
-          # For tree-sitter, check if it's a singleton method
-          type_str = @node.type.to_s
-          if type_str.include?("singleton")
-            :singleton
-          else
-            :instance
+          return :instance unless @node.respond_to?(:each)
+
+          @node.each do |child|
+            return :singleton if child.respond_to?(:type) && child.type.to_sym == :self
           end
+
+          :instance
         end
       end
 
@@ -345,8 +372,8 @@ module Rbs
         if @backend == :rbs
           @node.respond_to?(:new_name) ? @node.new_name.to_s : nil
         else
-          # For tree-sitter, find the new name child
-          extract_child_text("new_name") || extract_child_text("alias_name")
+          method_names = extract_child_texts("method_name")
+          method_names.first || extract_child_text("new_name") || extract_child_text("alias_name")
         end
       end
 
@@ -358,8 +385,24 @@ module Rbs
         if @backend == :rbs
           @node.respond_to?(:old_name) ? @node.old_name.to_s : nil
         else
-          # For tree-sitter, find the old name child
-          extract_child_text("old_name") || extract_child_text("aliased_name")
+          method_names = extract_child_texts("method_name")
+          method_names[1] || extract_child_text("old_name") || extract_child_text("aliased_name")
+        end
+      end
+
+      # Get visibility kind (:public or :private)
+      # @return [Symbol, nil]
+      def visibility_kind
+        return unless visibility?
+
+        if @backend == :rbs
+          raw_type = @node.class.name.to_s
+          return :public if raw_type.end_with?("::Public")
+          return :private if raw_type.end_with?("::Private")
+
+          nil
+        else
+          extract_tree_sitter_visibility_kind
         end
       end
 
@@ -388,6 +431,8 @@ module Rbs
           global_name
           alias_name
           method_name
+          ivar_name
+          cvar_name
         ]
 
         @node.each do |child|
@@ -419,6 +464,52 @@ module Rbs
         end
       end
 
+      def extract_child_text(child_type)
+        extract_child_texts(child_type).first
+      end
+
+      def extract_child_texts(*child_types)
+        desired_types = child_types.flatten.map(&:to_s)
+        return [] unless @node.respond_to?(:each)
+
+        @node.each_with_object([]) do |child, texts|
+          next unless desired_types.include?(child.type.to_s)
+
+          inner_text = if child.respond_to?(:each)
+            child.each do |inner|
+              inner_type = inner.type.to_s
+              if %w[constant identifier].include?(inner_type)
+                break extract_node_text(inner)
+              end
+            end
+          end
+
+          texts << (inner_text || extract_node_text(child))
+        end.compact
+      end
+
+      def extract_tree_sitter_visibility_kind
+        return unless @node.respond_to?(:each)
+
+        @node.each do |child|
+          next unless child.respond_to?(:type)
+
+          child_type = child.type.to_s
+          return child_type.to_sym if %w[public private].include?(child_type)
+
+          next unless child.respond_to?(:each)
+
+          child.each do |inner|
+            next unless inner.respond_to?(:type)
+
+            inner_type = inner.type.to_s
+            return inner_type.to_sym if %w[public private].include?(inner_type)
+          end
+        end
+
+        nil
+      end
+
       # Extract members from RBS gem container node
       # @return [Array<NodeWrapper>]
       def extract_rbs_members
@@ -437,19 +528,29 @@ module Rbs
       # Extract members from tree-sitter container node
       # @return [Array<NodeWrapper>]
       def extract_tree_sitter_members
-        members = []
-        @node.each do |child|
-          canonical = NodeTypeNormalizer.canonical_type(child.type, @backend)
-          next unless NodeTypeNormalizer.member_type?(canonical)
+        @node.each_with_object([]) do |child, members|
+          append_tree_sitter_member_nodes(members, child)
+        end
+      end
 
+      def append_tree_sitter_member_nodes(members, node)
+        canonical = NodeTypeNormalizer.canonical_type_for_node(node, @backend)
+
+        if NodeTypeNormalizer.member_type?(canonical)
           members << NodeWrapper.new(
-            child,
+            node,
             lines: @lines,
             source: @source,
             backend: @backend,
           )
+          return
         end
-        members
+
+        return unless %i[members_container member_wrapper].include?(canonical)
+
+        node.each do |child|
+          append_tree_sitter_member_nodes(members, child)
+        end
       end
     end
   end

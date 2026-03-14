@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 # External gems
-# NOTE: rbs gem is NOT required here - it's loaded dynamically by the rbs backend
-# when needed. This allows rbs-merge to work on JRuby with tree-sitter-rbs.
+# NOTE: rbs gem is loaded by the RBS backend when needed.
 require "version_gem"
 require "set"
 
@@ -72,6 +71,7 @@ module Rbs
     class DestinationParseError < ParseError; end
 
     autoload :DebugLogger, "rbs/merge/debug_logger"
+    autoload :CommentTracker, "rbs/merge/comment_tracker"
     autoload :FreezeNode, "rbs/merge/freeze_node"
     autoload :MergeResult, "rbs/merge/merge_result"
     autoload :NodeTypeNormalizer, "rbs/merge/node_type_normalizer"
@@ -90,14 +90,11 @@ module Rbs
     BACKEND_REGISTRY = Struct.new(:registered, :mutex).new(false, Mutex.new)
 
     class << self
-      # Register the RBS backends with TreeHaver
+      # Register the current RBS parsing entrypoints with TreeHaver.
       #
-      # This registers both:
-      # 1. The RBS gem backend (Ruby-based, MRI only)
-      # 2. The tree-sitter-rbs grammar (if available, works on all platforms)
-      #
-      # This allows TreeHaver.parser_for(:rbs) to use whichever backend is
-      # available, with the RBS gem preferred when available.
+      # This registers:
+      # 1. the RBS gem backend
+      # 2. the tree-sitter-rbs grammar when the sibling TreeHaver runtime can load it
       #
       # @api private
       def register_backend!
@@ -112,8 +109,7 @@ module Rbs
             gem_name: "rbs",
           )
 
-          # Also register tree-sitter-rbs grammar if available
-          # This enables tree-sitter backends (mri, ffi, rust, java) to parse RBS
+          # Also register the tree-sitter-rbs grammar when present.
           grammar_finder = TreeHaver::GrammarFinder.new(:rbs)
           if grammar_finder.available?
             TreeHaver.register_language(

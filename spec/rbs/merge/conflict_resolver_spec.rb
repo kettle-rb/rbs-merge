@@ -6,6 +6,127 @@ require "ast/merge/rspec/shared_examples"
 # ConflictResolver specs - works with any RBS parser backend
 # Tagged with :rbs_parsing since FileAnalysis supports both RBS gem and tree-sitter-rbs
 RSpec.describe Rbs::Merge::ConflictResolver, :rbs_parsing do
+  shared_examples "comment-aware declaration identity" do
+    let(:documented_source) do
+      <<~RBS
+        # shared docs
+        class Foo
+          def bar: () -> void
+        end
+      RBS
+    end
+    let(:different_docs_source) do
+      <<~RBS
+        # different docs
+        class Foo
+          def bar: () -> void
+        end
+      RBS
+    end
+    let(:documented_analysis) { Rbs::Merge::FileAnalysis.new(documented_source) }
+    let(:different_docs_analysis) { Rbs::Merge::FileAnalysis.new(different_docs_source) }
+
+    it "treats identical documented declarations as identical" do
+      resolver = described_class.new(
+        preference: :destination,
+        template_analysis: documented_analysis,
+        dest_analysis: documented_analysis,
+      )
+
+      decl1 = documented_analysis.declarations.first
+      decl2 = documented_analysis.declarations.first
+
+      expect(resolver.declarations_identical?(decl1, decl2)).to be true
+    end
+
+    it "treats differing declaration-leading docs as a meaningful difference" do
+      resolver = described_class.new(
+        preference: :destination,
+        template_analysis: documented_analysis,
+        dest_analysis: different_docs_analysis,
+      )
+
+      template_decl = documented_analysis.declarations.first
+      dest_decl = different_docs_analysis.declarations.first
+
+      expect(resolver.declarations_identical?(template_decl, dest_decl)).to be false
+    end
+  end
+
+  shared_examples "documented recursive resolution" do
+    let(:documented_template_source) do
+      <<~RBS
+        # template docs
+        class Foo
+          def bar: () -> void
+        end
+      RBS
+    end
+    let(:documented_dest_source) do
+      <<~RBS
+        # destination docs
+        class Foo
+          def baz: () -> void
+        end
+      RBS
+    end
+    let(:documented_template_analysis) { Rbs::Merge::FileAnalysis.new(documented_template_source) }
+    let(:documented_dest_analysis) { Rbs::Merge::FileAnalysis.new(documented_dest_source) }
+
+    it "still resolves documented container declarations through the recursive path" do
+      resolver = described_class.new(
+        preference: :destination,
+        template_analysis: documented_template_analysis,
+        dest_analysis: documented_dest_analysis,
+      )
+
+      template_decl = documented_template_analysis.declarations.first
+      dest_decl = documented_dest_analysis.declarations.first
+
+      result = resolver.resolve(template_decl, dest_decl, template_index: 0, dest_index: 0)
+
+      expect(result[:source]).to eq(:recursive)
+      expect(result[:decision]).to eq(Rbs::Merge::MergeResult::DECISION_RECURSIVE)
+    end
+  end
+
+  shared_examples "freeze block resolution parity" do
+    let(:template_source_with_class) do
+      <<~RBS
+        class Foo
+          def bar: (String) -> Integer
+        end
+      RBS
+    end
+    let(:dest_with_freeze_source) do
+      <<~RBS
+        # rbs-merge:freeze
+        class Foo
+          def bar: (Integer) -> String
+        end
+        # rbs-merge:unfreeze
+      RBS
+    end
+    let(:template_analysis_with_class) { Rbs::Merge::FileAnalysis.new(template_source_with_class) }
+    let(:dest_analysis_with_freeze) { Rbs::Merge::FileAnalysis.new(dest_with_freeze_source) }
+
+    it "treats freeze blocks as destination-owned regardless of preference" do
+      resolver = described_class.new(
+        preference: :template,
+        template_analysis: template_analysis_with_class,
+        dest_analysis: dest_analysis_with_freeze,
+      )
+
+      freeze_node = dest_analysis_with_freeze.freeze_blocks.first
+      template_decl = template_analysis_with_class.declarations.first
+      result = resolver.resolve(template_decl, freeze_node, template_index: 0, dest_index: 0)
+
+      expect(result[:source]).to eq(:destination)
+      expect(result[:declaration]).to eq(freeze_node)
+      expect(result[:decision]).to eq(Rbs::Merge::MergeResult::DECISION_FREEZE_BLOCK)
+    end
+  end
+
   # Use shared examples to validate base ConflictResolverBase integration
   # Note: rbs-merge uses the :node strategy
   it_behaves_like "Ast::Merge::ConflictResolverBase" do
@@ -417,5 +538,65 @@ RSpec.describe Rbs::Merge::ConflictResolver, :rbs_parsing do
         expect(resolver.can_recursive_merge?(class_decl, module_decl)).to be false
       end
     end
+  end
+
+  describe "comment-aware explicit backend parity", :rbs_backend do
+    around do |example|
+      TreeHaver.with_backend(:rbs) do
+        example.run
+      end
+    end
+
+    it_behaves_like "comment-aware declaration identity"
+    it_behaves_like "documented recursive resolution"
+    it_behaves_like "freeze block resolution parity"
+  end
+
+  describe "comment-aware explicit backend parity", :mri_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:mri) do
+        example.run
+      end
+    end
+
+    it_behaves_like "comment-aware declaration identity"
+    it_behaves_like "documented recursive resolution"
+    it_behaves_like "freeze block resolution parity"
+  end
+
+  describe "comment-aware explicit backend parity", :java_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:java) do
+        example.run
+      end
+    end
+
+    it_behaves_like "comment-aware declaration identity"
+    it_behaves_like "documented recursive resolution"
+    it_behaves_like "freeze block resolution parity"
+  end
+
+  describe "comment-aware explicit backend parity", :rbs_grammar, :rust_backend do
+    around do |example|
+      TreeHaver.with_backend(:rust) do
+        example.run
+      end
+    end
+
+    it_behaves_like "comment-aware declaration identity"
+    it_behaves_like "documented recursive resolution"
+    it_behaves_like "freeze block resolution parity"
+  end
+
+  describe "comment-aware explicit backend parity", :ffi_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:ffi) do
+        example.run
+      end
+    end
+
+    it_behaves_like "comment-aware declaration identity"
+    it_behaves_like "documented recursive resolution"
+    it_behaves_like "freeze block resolution parity"
   end
 end

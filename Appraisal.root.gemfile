@@ -2,19 +2,12 @@
 
 source "https://gem.coop"
 
-# Appraisal Root Gemfile is for running appraisal to generate the Appraisal Gemfiles
-#   in gemfiles/*gemfile.
-# On CI, we use it for the Appraisal-based builds.
-# We do not load the standard Gemfile, as it is tailored for local development.
+# Appraisal Root Gemfile is for generating appraisal Gemfiles.
+# It does not replace the main local sibling-development Gemfile flow.
 
 gemspec
 
-# rbs has to be restricted in the root appraisal in order for the jruby appraisal bundles to install on jruby at all.
-# Note: We can't reuse the modular gemfile for jruby here because anything in this gile gets added to all appraisals,
-#       and the paths do not align.
+# Keep the root appraisal Gemfile minimal.
 platform "jruby" do
-  # JRuby does not yet support RBS 1.7+, which was refactored to use a C extension to replace the native Ruby racc
-  # https://github.com/ruby/rbs/issues/2067
-  # https://github.com/ruby/rbs/pull/788
   gem "rbs", ">= 3.10"
 end

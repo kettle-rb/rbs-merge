@@ -30,6 +30,234 @@ RSpec.describe Rbs::Merge::MergeResult, :rbs_parsing do
   let(:dest_analysis) { Rbs::Merge::FileAnalysis.new(dest_source) }
   let(:result) { described_class.new(template_analysis, dest_analysis) }
 
+  shared_examples "extract_lines with leading comments" do
+    let(:source_with_comments) do
+      <<~RBS
+        # This is a comment for the class
+        class CommentedClass
+          def bar: () -> void
+        end
+      RBS
+    end
+    let(:analysis_with_comments) { Rbs::Merge::FileAnalysis.new(source_with_comments) }
+    let(:result_with_comments) { described_class.new(analysis_with_comments, analysis_with_comments) }
+
+    it "includes leading comments when extracting lines" do
+      result_with_comments.add_from_template(0)
+      output = result_with_comments.to_s
+      expect(output).to include("# This is a comment for the class")
+      expect(output).to include("class CommentedClass")
+    end
+  end
+
+  shared_examples "comment source fallback extraction" do
+    let(:template_without_comments) do
+      <<~RBS
+        class CommentedClass
+          def bar: () -> void
+        end
+      RBS
+    end
+    let(:destination_with_comments) do
+      <<~RBS
+        # Keep destination docs
+        class CommentedClass
+          def bar: () -> void
+        end
+      RBS
+    end
+    let(:template_without_comments_analysis) { Rbs::Merge::FileAnalysis.new(template_without_comments) }
+    let(:destination_with_comments_analysis) { Rbs::Merge::FileAnalysis.new(destination_with_comments) }
+    let(:result_with_comment_fallback) do
+      described_class.new(template_without_comments_analysis, destination_with_comments_analysis)
+    end
+
+    it "uses the comment source statement when the preferred statement lacks leading comments" do
+      result_with_comment_fallback.add_from_template(
+        0,
+        comment_source_statement: destination_with_comments_analysis.statements.first,
+        comment_source_analysis: destination_with_comments_analysis,
+      )
+
+      expect(result_with_comment_fallback.to_s).to eq(<<~RBS)
+        # Keep destination docs
+        class CommentedClass
+          def bar: () -> void
+        end
+      RBS
+    end
+  end
+
+  shared_examples "freeze block emission parity" do
+    let(:dest_with_freeze) do
+      <<~RBS
+        # rbs-merge:freeze
+        type frozen = String
+        # rbs-merge:unfreeze
+      RBS
+    end
+    let(:dest_analysis_frozen) { Rbs::Merge::FileAnalysis.new(dest_with_freeze) }
+    let(:result_frozen) { described_class.new(template_analysis, dest_analysis_frozen) }
+
+    it "emits the exact freeze block lines and records a freeze decision" do
+      freeze_node = dest_analysis_frozen.freeze_blocks.first
+
+      result_frozen.add_freeze_block(freeze_node)
+
+      expect(result_frozen.to_s).to eq(<<~RBS)
+        # rbs-merge:freeze
+        type frozen = String
+        # rbs-merge:unfreeze
+      RBS
+      expect(result_frozen.decisions.first[:decision]).to eq(described_class::DECISION_FREEZE_BLOCK)
+      expect(result_frozen.decisions.first[:source]).to eq(:destination)
+    end
+  end
+
+  shared_examples "custom freeze block emission parity" do
+    let(:dest_with_custom_token_freeze) do
+      <<~RBS
+        # custom-token:freeze
+        type frozen = String
+        # custom-token:unfreeze
+      RBS
+    end
+    let(:dest_analysis_custom_token_frozen) do
+      Rbs::Merge::FileAnalysis.new(dest_with_custom_token_freeze, freeze_token: "custom-token")
+    end
+    let(:result_custom_token_frozen) { described_class.new(template_analysis, dest_analysis_custom_token_frozen) }
+
+    it "emits the exact custom-token freeze block lines and records a freeze decision" do
+      freeze_node = dest_analysis_custom_token_frozen.freeze_blocks.first
+
+      result_custom_token_frozen.add_freeze_block(freeze_node)
+
+      expect(result_custom_token_frozen.to_s).to eq(<<~RBS)
+        # custom-token:freeze
+        type frozen = String
+        # custom-token:unfreeze
+      RBS
+      expect(result_custom_token_frozen.decisions.first[:decision]).to eq(described_class::DECISION_FREEZE_BLOCK)
+      expect(result_custom_token_frozen.decisions.first[:source]).to eq(:destination)
+    end
+  end
+
+  shared_examples "freeze block leading docs emission parity" do
+    let(:dest_with_documented_freeze) do
+      <<~RBS
+        # keep freeze docs
+        # rbs-merge:freeze
+        type frozen = String
+        # rbs-merge:unfreeze
+      RBS
+    end
+    let(:dest_analysis_documented_frozen) { Rbs::Merge::FileAnalysis.new(dest_with_documented_freeze) }
+    let(:result_documented_frozen) { described_class.new(template_analysis, dest_analysis_documented_frozen) }
+
+    it "emits leading docs that belong to the freeze block" do
+      freeze_node = dest_analysis_documented_frozen.freeze_blocks.first
+
+      result_documented_frozen.add_freeze_block(freeze_node)
+
+      expect(result_documented_frozen.to_s).to eq(<<~RBS)
+        # keep freeze docs
+        # rbs-merge:freeze
+        type frozen = String
+        # rbs-merge:unfreeze
+      RBS
+    end
+  end
+
+  shared_examples "reason-bearing freeze block leading docs emission parity" do
+    let(:dest_with_documented_reason_bearing_freeze) do
+      <<~RBS
+        # keep freeze docs
+        # rbs-merge:freeze keep local customization
+        type frozen = String
+        # rbs-merge:unfreeze resume normal merge
+      RBS
+    end
+    let(:dest_analysis_documented_reason_bearing_frozen) do
+      Rbs::Merge::FileAnalysis.new(dest_with_documented_reason_bearing_freeze)
+    end
+    let(:result_documented_reason_bearing_frozen) do
+      described_class.new(template_analysis, dest_analysis_documented_reason_bearing_frozen)
+    end
+
+    it "emits leading docs that belong to the reason-bearing freeze block" do
+      freeze_node = dest_analysis_documented_reason_bearing_frozen.freeze_blocks.first
+
+      result_documented_reason_bearing_frozen.add_freeze_block(freeze_node)
+
+      expect(result_documented_reason_bearing_frozen.to_s).to eq(<<~RBS)
+        # keep freeze docs
+        # rbs-merge:freeze keep local customization
+        type frozen = String
+        # rbs-merge:unfreeze resume normal merge
+      RBS
+    end
+  end
+
+  shared_examples "custom freeze block leading docs emission parity" do
+    let(:dest_with_documented_custom_token_freeze) do
+      <<~RBS
+        # keep custom freeze docs
+        # custom-token:freeze
+        type frozen = String
+        # custom-token:unfreeze
+      RBS
+    end
+    let(:dest_analysis_documented_custom_token_frozen) do
+      Rbs::Merge::FileAnalysis.new(dest_with_documented_custom_token_freeze, freeze_token: "custom-token")
+    end
+    let(:result_documented_custom_token_frozen) do
+      described_class.new(template_analysis, dest_analysis_documented_custom_token_frozen)
+    end
+
+    it "emits leading docs that belong to the custom-token freeze block" do
+      freeze_node = dest_analysis_documented_custom_token_frozen.freeze_blocks.first
+
+      result_documented_custom_token_frozen.add_freeze_block(freeze_node)
+
+      expect(result_documented_custom_token_frozen.to_s).to eq(<<~RBS)
+        # keep custom freeze docs
+        # custom-token:freeze
+        type frozen = String
+        # custom-token:unfreeze
+      RBS
+    end
+  end
+
+  shared_examples "reason-bearing custom freeze block leading docs emission parity" do
+    let(:dest_with_documented_reason_bearing_custom_token_freeze) do
+      <<~RBS
+        # keep custom freeze docs
+        # custom-token:freeze keep local customization
+        type frozen = String
+        # custom-token:unfreeze resume normal merge
+      RBS
+    end
+    let(:dest_analysis_documented_reason_bearing_custom_token_frozen) do
+      Rbs::Merge::FileAnalysis.new(dest_with_documented_reason_bearing_custom_token_freeze, freeze_token: "custom-token")
+    end
+    let(:result_documented_reason_bearing_custom_token_frozen) do
+      described_class.new(template_analysis, dest_analysis_documented_reason_bearing_custom_token_frozen)
+    end
+
+    it "emits leading docs that belong to the reason-bearing custom-token freeze block" do
+      freeze_node = dest_analysis_documented_reason_bearing_custom_token_frozen.freeze_blocks.first
+
+      result_documented_reason_bearing_custom_token_frozen.add_freeze_block(freeze_node)
+
+      expect(result_documented_reason_bearing_custom_token_frozen.to_s).to eq(<<~RBS)
+        # keep custom freeze docs
+        # custom-token:freeze keep local customization
+        type frozen = String
+        # custom-token:unfreeze resume normal merge
+      RBS
+    end
+  end
+
   # Use shared examples - rbs-merge's MergeResult requires analysis args
   it_behaves_like "Ast::Merge::MergeResultBase" do
     let(:merge_result_class) { described_class }
@@ -206,23 +434,82 @@ RSpec.describe Rbs::Merge::MergeResult, :rbs_parsing do
       end
     end
 
-    let(:source_with_comments) do
-      <<~RBS
-        # This is a comment for the class
-        class CommentedClass
-          def bar: () -> void
-        end
-      RBS
-    end
-    let(:analysis_with_comments) { Rbs::Merge::FileAnalysis.new(source_with_comments) }
-    let(:result_with_comments) { described_class.new(analysis_with_comments, analysis_with_comments) }
+    it_behaves_like "extract_lines with leading comments"
+    it_behaves_like "comment source fallback extraction"
+    it_behaves_like "freeze block emission parity"
+    it_behaves_like "freeze block leading docs emission parity"
+    it_behaves_like "reason-bearing freeze block leading docs emission parity"
+    it_behaves_like "custom freeze block emission parity"
+    it_behaves_like "custom freeze block leading docs emission parity"
+    it_behaves_like "reason-bearing custom freeze block leading docs emission parity"
+  end
 
-    it "includes leading comments when extracting lines" do
-      result_with_comments.add_from_template(0)
-      output = result_with_comments.to_s
-      expect(output).to include("# This is a comment for the class")
-      expect(output).to include("class CommentedClass")
+  describe "extract_lines with comments", :mri_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:mri) do
+        example.run
+      end
     end
+
+    it_behaves_like "extract_lines with leading comments"
+    it_behaves_like "comment source fallback extraction"
+    it_behaves_like "freeze block emission parity"
+    it_behaves_like "freeze block leading docs emission parity"
+    it_behaves_like "reason-bearing freeze block leading docs emission parity"
+    it_behaves_like "custom freeze block emission parity"
+    it_behaves_like "custom freeze block leading docs emission parity"
+    it_behaves_like "reason-bearing custom freeze block leading docs emission parity"
+  end
+
+  describe "extract_lines with comments", :java_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:java) do
+        example.run
+      end
+    end
+
+    it_behaves_like "extract_lines with leading comments"
+    it_behaves_like "comment source fallback extraction"
+    it_behaves_like "freeze block emission parity"
+    it_behaves_like "freeze block leading docs emission parity"
+    it_behaves_like "reason-bearing freeze block leading docs emission parity"
+    it_behaves_like "custom freeze block emission parity"
+    it_behaves_like "custom freeze block leading docs emission parity"
+    it_behaves_like "reason-bearing custom freeze block leading docs emission parity"
+  end
+
+  describe "extract_lines with comments", :rbs_grammar, :rust_backend do
+    around do |example|
+      TreeHaver.with_backend(:rust) do
+        example.run
+      end
+    end
+
+    it_behaves_like "extract_lines with leading comments"
+    it_behaves_like "comment source fallback extraction"
+    it_behaves_like "freeze block emission parity"
+    it_behaves_like "freeze block leading docs emission parity"
+    it_behaves_like "reason-bearing freeze block leading docs emission parity"
+    it_behaves_like "custom freeze block emission parity"
+    it_behaves_like "custom freeze block leading docs emission parity"
+    it_behaves_like "reason-bearing custom freeze block leading docs emission parity"
+  end
+
+  describe "extract_lines with comments", :ffi_backend, :rbs_grammar do
+    around do |example|
+      TreeHaver.with_backend(:ffi) do
+        example.run
+      end
+    end
+
+    it_behaves_like "extract_lines with leading comments"
+    it_behaves_like "comment source fallback extraction"
+    it_behaves_like "freeze block emission parity"
+    it_behaves_like "freeze block leading docs emission parity"
+    it_behaves_like "reason-bearing freeze block leading docs emission parity"
+    it_behaves_like "custom freeze block emission parity"
+    it_behaves_like "custom freeze block leading docs emission parity"
+    it_behaves_like "reason-bearing custom freeze block leading docs emission parity"
   end
 
   describe "#add_recursive_merge edge cases" do
