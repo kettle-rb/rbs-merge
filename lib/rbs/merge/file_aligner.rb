@@ -19,6 +19,7 @@ module Rbs
     #     end
     #   end
     class FileAligner
+      include ::Ast::Merge::TrailingGroups::AlignmentSort
       # @return [FileAnalysis] Template file analysis
       attr_reader :template_analysis
 
@@ -136,26 +137,26 @@ module Rbs
       # @param alignment [Array<Hash>] Alignment entries
       # @return [Array<Hash>] Sorted alignment
       def sort_alignment(alignment)
-        alignment.sort_by do |entry|
-          case entry[:type]
-          when :match
-            # Destination-backed entries should preserve destination-relative order.
-            [0, entry[:dest_index], 0, entry[:template_index] || 0]
-          when :dest_only
-            if entry[:dest_decl].is_a?(FreezeNode)
-              # Freeze blocks keep their existing post-match behavior.
-              [1, entry[:dest_index], 0, 0]
-            else
-              # Ordinary destination-only items stay interleaved with matches by destination index.
-              [0, entry[:dest_index], 1, 0]
-            end
-          when :template_only
-            # Template-only items at the end, by template index
-            [2, entry[:template_index], 0, 0]
-          else
-            [3, 0, 0, 0]
-          end
+        sort_alignment_with_template_position(alignment, 0)
+      end
+
+      # Override: 4-tuple key for matches — preserves destination-relative order
+      def match_sort_key(entry)
+        [0, entry[:dest_index], 0, entry[:template_index] || 0]
+      end
+
+      # Override: dest-only entries — freeze blocks sort separately
+      def dest_only_sort_key(entry)
+        if entry[:dest_decl].is_a?(FreezeNode)
+          [1, entry[:dest_index], 0, 0]
+        else
+          [0, entry[:dest_index], 1, 0]
         end
+      end
+
+      # Override: template-only items at the end, by template index
+      def template_only_sort_key(entry, _dest_size)
+        [2, entry[:template_index], 0, 0]
       end
     end
   end
