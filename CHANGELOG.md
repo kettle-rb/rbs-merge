@@ -26,6 +26,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Preserved destination-owned docs and leading comments through template-preferred matched declarations and recursively merged members across the native, Rust, and FFI-backed validation paths
 - Preserved or promoted comments for removed destination-only declarations when `remove_template_missing_nodes: true` is enabled, while keeping destination-relative ordering stable in the documented Phase 2 contract
+- Adopted `Ast::Merge::TrailingGroups::AlignmentSort` for shared template-only RBS declaration ordering while preserving the existing freeze-block-aware destination sort contract
 
 ### Deprecated
 
