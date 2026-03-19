@@ -1059,6 +1059,54 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     end
   end
 
+  shared_examples "shared layout compliance" do
+    describe "shared layout compliance" do
+      subject(:analysis) { described_class.new(layout_source) }
+
+      let(:layout_source) do
+        <<~RBS
+
+          class Foo
+          end
+
+          module Bar
+          end
+
+        RBS
+      end
+
+      let(:first_owner) { analysis.statements.first }
+      let(:second_owner) { analysis.statements[1] }
+      let(:layout_augmenter) { analysis.layout_augmenter(owners: [first_owner, second_owner].compact) }
+      let(:layout_attachment) { layout_augmenter.attachment_for(first_owner) }
+
+      it "finds stable top-level declaration owners for layout inference" do
+        expect(first_owner).not_to be_nil
+        expect(second_owner).not_to be_nil
+        expect(first_owner.canonical_type).to eq(:class)
+        expect(second_owner.canonical_type).to eq(:module)
+      end
+
+      it_behaves_like "Ast::Merge::Layout::Attachment" do
+        let(:expected_attachment_owner) { first_owner }
+        let(:expected_leading_gap_kind) { :preamble }
+        let(:expected_trailing_gap_kind) { :interstitial }
+        let(:expected_gap_ranges) { [1..1, 4..4] }
+        let(:expected_leading_controls_output) { true }
+        let(:expected_trailing_controls_output) { false }
+      end
+
+      it_behaves_like "Ast::Merge::Layout::Augmenter" do
+        let(:augmenter_owner) { first_owner }
+        let(:expected_preamble_range) { 1..1 }
+        let(:expected_postlude_range) { 7..8 }
+        let(:expected_interstitial_ranges) { [4..4] }
+        let(:expected_owner_leading_gap_kind) { :preamble }
+        let(:expected_owner_trailing_gap_kind) { :interstitial }
+      end
+    end
+  end
+
   # ============================================================
   # :auto backend tests (uses whatever is available)
   # This tests the default behavior most users will experience
@@ -1127,6 +1175,7 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
     it_behaves_like "shared comment capability"
+    it_behaves_like "shared layout compliance"
   end
 
   # ============================================================
@@ -1173,6 +1222,7 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
     it_behaves_like "shared comment capability"
+    it_behaves_like "shared layout compliance"
 
     # RBS gem specific tests
     describe "RBS gem specific features" do
@@ -1239,6 +1289,7 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
     it_behaves_like "shared comment capability"
+    it_behaves_like "shared layout compliance"
   end
 
   # ============================================================
@@ -1284,6 +1335,7 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
     it_behaves_like "shared comment capability"
+    it_behaves_like "shared layout compliance"
   end
 
   # ============================================================
@@ -1330,6 +1382,7 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
     it_behaves_like "shared comment capability"
+    it_behaves_like "shared layout compliance"
   end
 
   # ============================================================
@@ -1376,5 +1429,6 @@ RSpec.describe Rbs::Merge::FileAnalysis do
     it_behaves_like "fallthrough_node? behavior"
     it_behaves_like "line_at access"
     it_behaves_like "shared comment capability"
+    it_behaves_like "shared layout compliance"
   end
 end
