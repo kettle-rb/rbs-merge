@@ -122,7 +122,7 @@ RSpec.describe Rbs::Merge::FileAligner, :rbs_parsing do
           template_index: 0,
           dest_index: 0,
           signature: [:type_alias, "custom"],
-        )
+        ),
       )
     end
   end
@@ -151,7 +151,7 @@ RSpec.describe Rbs::Merge::FileAligner, :rbs_parsing do
           template_index: 0,
           dest_index: 0,
           signature: [:class_alias, "Foo"],
-        )
+        ),
       )
     end
   end
@@ -180,7 +180,7 @@ RSpec.describe Rbs::Merge::FileAligner, :rbs_parsing do
           template_index: 0,
           dest_index: 0,
           signature: [:module_alias, "Baz"],
-        )
+        ),
       )
     end
   end
@@ -221,7 +221,7 @@ RSpec.describe Rbs::Merge::FileAligner, :rbs_parsing do
           template_index: 0,
           dest_index: 0,
           signature: [:class, "Foo"],
-        )
+        ),
       )
     end
   end

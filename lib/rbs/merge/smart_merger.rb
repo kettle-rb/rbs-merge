@@ -213,13 +213,13 @@ module Rbs
         return unless analysis
         return if lines.empty?
 
-        decision = analysis == @template_analysis ? MergeResult::DECISION_TEMPLATE : MergeResult::DECISION_DESTINATION
+        decision = (analysis == @template_analysis) ? MergeResult::DECISION_TEMPLATE : MergeResult::DECISION_DESTINATION
         @result.add_raw(lines, decision: decision)
       end
 
       def preferred_root_boundary_lines(kind)
         analyses = [preferred_root_boundary_analysis]
-        fallback_analysis = analyses.first == @template_analysis ? @dest_analysis : @template_analysis
+        fallback_analysis = (analyses.first == @template_analysis) ? @dest_analysis : @template_analysis
         analyses << fallback_analysis
 
         analyses.each do |analysis|
@@ -232,7 +232,7 @@ module Rbs
 
       def preferred_root_boundary_analysis
         pref = @preference.is_a?(Hash) ? (@preference[:default] || :destination) : @preference
-        pref == :template ? @template_analysis : @dest_analysis
+        (pref == :template) ? @template_analysis : @dest_analysis
       end
 
       def root_boundary_lines_for(kind, analysis)
@@ -263,7 +263,7 @@ module Rbs
         augmenter = root_comment_augmenter_for(analysis)
         return unless augmenter
 
-        kind == :preamble ? augmenter.preamble_region : augmenter.postlude_region
+        (kind == :preamble) ? augmenter.preamble_region : augmenter.postlude_region
       end
 
       def root_comment_augmenter_for(analysis)
@@ -475,8 +475,8 @@ module Rbs
 
         if selected_members.empty?
           return empty_container_header_lines(selected_analysis, start_line: start_line, end_line: end_line) +
-            merge_member_lines(template_members, dest_members) +
-            empty_container_footer_lines(selected_analysis, start_line: start_line, end_line: end_line)
+              merge_member_lines(template_members, dest_members) +
+              empty_container_footer_lines(selected_analysis, start_line: start_line, end_line: end_line)
         end
 
         container_header_lines(selected_decl, selected_analysis) +
@@ -503,7 +503,7 @@ module Rbs
                   @template_analysis,
                   comment_source_statement: entry[:dest_decl],
                   comment_source_analysis: @dest_analysis,
-                )
+                ),
               )
             when :destination
               lines.concat(extract_statement_lines_with_leading_comments(entry[:dest_decl], @dest_analysis))
@@ -514,7 +514,7 @@ module Rbs
                   resolution[:dest_declaration],
                   entry[:template_index],
                   entry[:dest_index],
-                ).split("\n", -1).tap { |parts| parts.pop if parts.last == "" }
+                ).split("\n", -1).tap { |parts| parts.pop if parts.last == "" },
               )
             end
           when :template_only

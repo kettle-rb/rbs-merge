@@ -3,91 +3,30 @@
 module Rbs
   module Merge
     # Tracks hash-style comments in RBS source and exposes a shared comment API.
-    class CommentTracker
+    #
+    # Inherits shared lookup, query, region-building, and attachment API from
+    # +Ast::Merge::Comment::HashTrackerBase+. Only format-specific comment
+    # extraction and owner resolution are overridden here.
+    #
+    # RBS has only full-line comments (no inline comment syntax), and freeze
+    # marker lines are excluded from the tracked set.
+    class CommentTracker < Ast::Merge::Comment::HashTrackerBase
       DEFAULT_FREEZE_TOKEN = "rbs-merge"
-      FULL_LINE_COMMENT_REGEX = /\A(?<indent>\s*)#\s?(?<text>.*)\z/
-
-      attr_reader :lines, :comments
 
       def initialize(lines, freeze_token: DEFAULT_FREEZE_TOKEN)
-        @lines = Array(lines)
         @freeze_token = freeze_token
         @freeze_marker_pattern = Ast::Merge::FreezeNodeBase.pattern_for(:hash_comment, @freeze_token)
-        @comments = extract_comments
-        @comments_by_line = @comments.group_by { |comment| comment[:line] }
+        super(Array(lines))
       end
 
-      def comment_at(line_num)
-        @comments_by_line[line_num]&.first
-      end
-
-      def comment_nodes
-        @comment_nodes ||= @comments.map { |comment| build_comment_node(comment) }
-      end
-
-      def comment_node_at(line_num)
-        comment = comment_at(line_num)
-        return unless comment
-
-        build_comment_node(comment)
-      end
-
-      def comments_in_range(range)
-        @comments.select { |comment| range.cover?(comment[:line]) }
-      end
-
-      def comment_region_for_range(range, kind:, full_line_only: false)
-        selected = comments_in_range(range)
-        selected = selected.select { |comment| comment[:full_line] } if full_line_only
-
-        build_region(
-          kind: kind,
-          comments: selected,
-          metadata: {
-            range: range,
-            full_line_only: full_line_only,
-            source: :comment_tracker,
-          },
-        )
-      end
-
-      def leading_comments_before(line_num)
-        leading = []
-        current = line_num - 1
-
-        current -= 1 while current >= 1 && blank_line?(current)
-
-        while current >= 1
-          comment = comment_at(current)
-          break unless comment && comment[:full_line]
-
-          leading.unshift(comment)
-          current -= 1
-          current -= 1 while current >= 1 && blank_line?(current)
-        end
-
-        leading
-      end
-
-      def leading_comment_region_before(line_num)
-        selected = leading_comments_before(line_num)
-        return if selected.empty?
-
-        build_region(
-          kind: :leading,
-          comments: selected,
-          metadata: {
-            line_num: line_num,
-            source: :comment_tracker,
-          },
-        )
-      end
-
+      # RBS format has no inline comments — override to always return nil.
+      # This keeps comment_attachment_for from erroneously detecting inline
+      # content on the same line.
       def comment_attachment_for(owner, line_num: nil, **metadata)
         resolved_line_num = line_num || owner_line_num(owner)
         leading_region = resolved_line_num ? leading_comment_region_before(resolved_line_num) : nil
 
-        build_attachment(
+        Ast::Merge::Comment::Attachment.new(
           owner: owner,
           leading_region: leading_region,
           inline_region: nil,
@@ -96,12 +35,6 @@ module Rbs
             source: :comment_tracker,
           ),
         )
-      end
-
-      def blank_line?(line_num)
-        return false if line_num < 1 || line_num > @lines.length
-
-        @lines[line_num - 1].to_s.strip.empty?
       end
 
       def augment(owners: [], **options)
@@ -138,34 +71,6 @@ module Rbs
         return false unless line
 
         !!line.match(@freeze_marker_pattern)
-      end
-
-      def owner_line_num(owner)
-        return owner.start_line if owner.respond_to?(:start_line) && owner.start_line
-
-        nil
-      end
-
-      def build_comment_node(comment)
-        Ast::Merge::Comment::TrackedHashAdapter.node(comment, style: :hash_comment)
-      end
-
-      def build_region(kind:, comments:, metadata: {})
-        Ast::Merge::Comment::TrackedHashAdapter.region(
-          kind: kind,
-          comments: comments,
-          style: :hash_comment,
-          metadata: metadata,
-        )
-      end
-
-      def build_attachment(owner:, leading_region:, inline_region:, metadata: {})
-        Ast::Merge::Comment::Attachment.new(
-          owner: owner,
-          leading_region: leading_region,
-          inline_region: inline_region,
-          metadata: metadata,
-        )
       end
     end
   end

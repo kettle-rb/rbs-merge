@@ -278,14 +278,17 @@ RSpec.describe Rbs::Merge::CommentTracker do
     end
 
     it "attaches docs immediately above a custom-token freeze marker to the freeze block owner" do
-      tracker = described_class.new([
-        "# keep custom freeze docs",
-        "# custom-token:freeze",
-        "type custom = String",
-        "# custom-token:unfreeze",
-        "class Foo",
-        "end",
-      ], freeze_token: "custom-token")
+      tracker = described_class.new(
+        [
+          "# keep custom freeze docs",
+          "# custom-token:freeze",
+          "type custom = String",
+          "# custom-token:unfreeze",
+          "class Foo",
+          "end",
+        ],
+        freeze_token: "custom-token",
+      )
       freeze_owner = owner_struct.new(start_line: 2, end_line: 4)
       following_owner = owner_struct.new(start_line: 5, end_line: 6)
 
@@ -316,14 +319,17 @@ RSpec.describe Rbs::Merge::CommentTracker do
     end
 
     it "attaches docs immediately above a reason-bearing custom-token freeze marker to the freeze block owner" do
-      tracker = described_class.new([
-        "# keep custom freeze docs",
-        "# custom-token:freeze keep local customization",
-        "type custom = String",
-        "# custom-token:unfreeze resume normal merge",
-        "class Foo",
-        "end",
-      ], freeze_token: "custom-token")
+      tracker = described_class.new(
+        [
+          "# keep custom freeze docs",
+          "# custom-token:freeze keep local customization",
+          "type custom = String",
+          "# custom-token:unfreeze resume normal merge",
+          "class Foo",
+          "end",
+        ],
+        freeze_token: "custom-token",
+      )
       freeze_owner = owner_struct.new(start_line: 2, end_line: 4)
       following_owner = owner_struct.new(start_line: 5, end_line: 6)
 
