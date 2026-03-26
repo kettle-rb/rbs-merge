@@ -25,6 +25,9 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Changed
 
 - Adopted the shared `Ast::Merge::Layout` contract for top-level RBS declaration gaps, including shared layout compliance coverage across native and tree-sitter-backed paths
+- Rebased `Rbs::Merge::CommentTracker` onto the shared
+  `Ast::Merge::Comment::HashTrackerBase`, keeping RBS-local extraction and owner
+  association rules in the leaf gem while sharing the tracker core
 - Preserved destination-owned docs and leading comments through template-preferred matched declarations and recursively merged members across the native, Rust, and FFI-backed validation paths
 - Preserved or promoted comments for removed destination-only declarations when `remove_template_missing_nodes: true` is enabled, while keeping destination-relative ordering stable in the documented Phase 2 contract
 - Rebased `Rbs::Merge::FileAligner` onto the shared `Ast::Merge::FileAlignerBase`, leaving RBS-local declaration payload keys plus freeze-node alias/signature and sort behavior in the RBS layer
