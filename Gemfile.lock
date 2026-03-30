@@ -1,15 +1,3 @@
-GIT
-  remote: https://github.com/pboling/yard-junk.git
-  revision: 54ccebabbfa9a9cd44d0b991687ebbfd22c32b55
-  branch: next
-  specs:
-    yard-junk (0.0.10)
-      backports (>= 3.18)
-      benchmark
-      ostruct
-      rainbow
-      yard
-
 PATH
   remote: .
   specs:
@@ -505,6 +493,11 @@ GEM
       rdoc (~> 6.11)
       version_gem (~> 1.1, >= 1.1.9)
       yard (~> 0.9, >= 0.9.37)
+    yard-junk (0.1.0)
+      benchmark
+      ostruct
+      rainbow
+      yard
     yard-relative_markdown_links (0.6.0)
       nokogiri (>= 1.14.3, < 2)
     yard-yaml (0.1.0)
@@ -525,11 +518,11 @@ PLATFORMS
 
 DEPENDENCIES
   addressable (>= 2.8, < 3)
-  appraisal2 (~> 3.0)
+  appraisal2 (~> 3.0, >= 3.0.6)
   ast-merge!
   bash-merge!
   benchmark (~> 0.5, >= 0.5.0)
-  bundler-audit (~> 0.9.2)
+  bundler-audit (~> 0.9.3)
   cgi
   debug (>= 1.1)
   dotenv-merge!
@@ -537,13 +530,13 @@ DEPENDENCIES
   ffi
   gem_bench (~> 2.0, >= 2.0.5)
   gitmoji-regex (~> 1.0, >= 1.0.3)
-  irb (~> 1.15, >= 1.15.2)
+  irb (~> 1.17)
   json-merge!
   jsonc-merge!
   kettle-dev (~> 2.0, >= 0)!
   kettle-jem!
   kettle-soup-cover!
-  kettle-test (~> 1.0, >= 1.0.6, >= 0)!
+  kettle-test (~> 1.0, >= 1.0.10, >= 0)!
   kramdown (~> 2.5, >= 2.5.1)
   kramdown-parser-gfm (~> 1.1)
   markdown-merge!
@@ -568,7 +561,7 @@ DEPENDENCIES
   ruby-progressbar (~> 1.13)
   ruby_tree_sitter (~> 2.1)
   standard (>= 1.50)
-  stone_checksums (~> 1.0, >= 1.0.2)
+  stone_checksums (~> 1.0, >= 1.0.3)
   stringio (>= 3.0)
   toml
   toml-merge!
@@ -577,8 +570,8 @@ DEPENDENCIES
   unparser (~> 0.8, >= 0.8.1)
   yaml-converter (~> 0.1)
   yard (~> 0.9, >= 0.9.37)
-  yard-fence (~> 0.8)
-  yard-junk (~> 0.0, >= 0.0.10)!
+  yard-fence (~> 0.8, >= 0.8.2)
+  yard-junk (~> 0.1, >= 0.1.0)
   yard-relative_markdown_links (~> 0.6)
   yard-yaml (~> 0.1)
 
@@ -741,7 +734,7 @@ CHECKSUMS
   yaml-converter (0.1.0) sha256=3a8a6ce675eec8adc7ee67697ee0567e2153cad974b601c062c3a25f545ecc77
   yard (0.9.38) sha256=721fb82afb10532aa49860655f6cc2eaa7130889df291b052e1e6b268283010f
   yard-fence (0.8.2) sha256=4efa58d682fc0eb57258a6d6a8463b61af0890082cdea45f19088b8634d9ab6f
-  yard-junk (0.0.10)
+  yard-junk (0.1.0) sha256=e85fe2ec1afa47313decd333447b53458cb1ed49b510b70015fdc3041a94bcdd
   yard-relative_markdown_links (0.6.0) sha256=3e5ffa85cbad9bac70bee5421774b190fb25d3bdf489323a5b3534f647d1a70e
   yard-yaml (0.1.0) sha256=8bf7b1a69183429c07e8c521d17fbbd56598387f15e13b2c27f31c4ba821a7a7
   zeitwerk (2.7.5) sha256=d8da92128c09ea6ec62c949011b00ed4a20242b255293dd66bf41545398f73dd

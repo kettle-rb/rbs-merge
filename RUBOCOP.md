@@ -10,8 +10,8 @@ This project uses `rubocop_gradual` instead of vanilla RuboCop for code style ch
 
 ### RuboCop LTS
 
-This project uses `rubocop-lts` to keep linting aligned with the current project Ruby and workspace tooling baseline.
-RuboCop rules are configured by the `rubocop-lts` family of gems to target a specific Ruby baseline. See: https://rubocop-lts.gitlab.io for more.
+This project uses `rubocop-lts` to ensure, on a best-effort basis, compatibility with Ruby >= 1.9.2.
+RuboCop rules are meticulously configured by the `rubocop-lts` family of gems to ensure that a project is compatible with a specific version of Ruby. See: https://rubocop-lts.gitlab.io for more.
 
 ## Checking RuboCop Violations
 

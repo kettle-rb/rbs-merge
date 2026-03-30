@@ -1,11 +1,17 @@
 # frozen_string_literal: true
 
-# kettle-dev Rakefile v1.1.60 - 2025-11-23
-# Generated project Rake tasks
+# kettle-jem:freeze
+# To retain chunks of comments & code during rbs-merge templating:
+# Wrap custom sections with freeze markers (e.g., as above and below this comment chunk).
+# rbs-merge will then preserve content between those markers across template runs.
+# kettle-jem:unfreeze
+
+# rbs-merge Rakefile v1.0.0 - 2026-03-29
+# Ruby 2.3 (Safe Navigation) or higher required
 #
 # MIT License (see License.txt)
 #
-# Copyright (c) 2025 Peter H. Boling (galtzo.com)
+# Copyright (c) 2026 Peter H. Boling (galtzo.com)
 #
 # Expected to work in any project that uses Bundler.
 #
@@ -16,17 +22,18 @@
 # rake appraisal:update                       # Update Appraisal gemfiles and run RuboCop...
 # rake bench                                  # Run all benchmarks (alias for bench:run)
 # rake bench:list                             # List available benchmark scripts
-# rake bench:run                              # Run all benchmark scripts
+# rake bench:run                              # Run all benchmark scripts (skips on CI)
 # rake build:generate_checksums               # Generate both SHA256 & SHA512 checksums i...
 # rake bundle:audit:check                     # Checks the Gemfile.lock for insecure depe...
 # rake bundle:audit:update                    # Updates the bundler-audit vulnerability d...
 # rake ci:act[opt]                            # Run 'act' with a selected workflow
 # rake coverage                               # Run specs w/ coverage and open results in...
 # rake default                                # Default tasks aggregator
-# rake install                                # Build and install kettle-dev-1.0.0.gem in...
-# rake install:local                          # Build and install kettle-dev-1.0.0.gem in...
-# rake kettle:dev:install                     # Install kettle-dev GitHub automation and ...
-# rake kettle:dev:template                    # Template kettle-dev files into the curren...
+# rake install                                # Build and install rbs-merge-1.0.0.gem in...
+# rake install:local                          # Build and install rbs-merge-1.0.0.gem in...
+# rake kettle:jem:install                     # Install rbs-merge GitHub automation and ...
+# rake kettle:jem:selftest                    # Self-test: template rbs-merge against itse...
+# rake kettle:jem:template                    # Template rbs-merge files into the curren...
 # rake reek                                   # Check for code smells
 # rake reek:update                            # Run reek and store the output into the RE...
 # rake release[remote]                        # Create tag v1.0.0 and build and push kett...
@@ -55,6 +62,8 @@ end
 
 # External gems that define tasks - add here!
 require "kettle/dev"
+require "kettle/jem"
+
 
 ### SPEC TASKS
 # Run FFI specs first (before the collision of MRI+FFI backends pollutes the environment),
