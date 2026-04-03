@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
   spec.summary = "🍲 Smart merge for RBS type signature files using AST analysis"
   spec.description = "🍲 Intelligently merge RBS type signature files by parsing and comparing AST structures. Supports freeze blocks to protect customizations, signature-based matching, and configurable merge strategies."
   spec.homepage = "https://github.com/kettle-rb/rbs-merge"
-  spec.licenses = ["MIT"]
+  spec.licenses = ["MIT", "AGPL-3.0-only", "PolyForm-Small-Business-1.0.0", "LicenseRef-Big-Time-Public-License"]
   spec.required_ruby_version = ">= 3.2.0"
 
   # Linux distros often package gems and securely certify them independent
