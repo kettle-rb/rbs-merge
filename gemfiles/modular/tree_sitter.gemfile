@@ -1,13 +1,1 @@
-# NOTE: tree-sitter-toml parser must be installed separately via your package manager
-#       e.g., `apt install libtree-sitter-toml-dev` or built from source
-#
-# TreeHaver provides the tree-sitter integration used by the sibling workspace.
-# These are the backend gems used by the current local development setup.
-
-# FFI backend
-gem "ffi", require: false # DO NOT LOAD, because conflicts with MRI
-
-platform :mri do
-  # Rust Backend
-  gem "tree_stump", "~> 0.2"
-end
+eval_gemfile "tree_sitter/r4/libs.gemfile"
