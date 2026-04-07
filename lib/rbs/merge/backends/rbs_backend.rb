@@ -419,7 +419,7 @@ module Rbs
             return "" unless @inner_node.respond_to?(:location) && @inner_node.location
 
             loc = @inner_node.location
-            source[loc.start_pos...loc.end_pos] || ""
+            source.byteslice(loc.start_pos, loc.end_pos - loc.start_pos) || ""
           end
 
           # Get all child nodes

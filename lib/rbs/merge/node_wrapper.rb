@@ -460,7 +460,7 @@ module Rbs
         if node.respond_to?(:text)
           node.text
         elsif node.respond_to?(:start_byte) && node.respond_to?(:end_byte) && @source
-          @source[node.start_byte...node.end_byte]
+          @source.byteslice(node.start_byte, node.end_byte - node.start_byte)
         end
       end
 
