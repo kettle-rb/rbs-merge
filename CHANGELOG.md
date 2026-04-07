@@ -39,9 +39,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-### Security
+- Fixed multi-byte character corruption in RBS text extraction — replaced `byteslice` with `slice` to prevent splitting multi-byte characters (e.g. emoji) at byte boundaries
 
-## [2.0.0] - 2026-02-19
+### Security
 
 - TAG: [v2.0.0][2.0.0t]
 - COVERAGE: 72.31% -- 713/986 lines in 12 files
