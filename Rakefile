@@ -73,7 +73,6 @@ rescue LoadError
   end
 end
 
-
 ### SPEC TASKS
 # Run FFI specs first (before the collision of MRI+FFI backends pollutes the environment),
 # then run remaining specs. This ensures FFI tests get a clean environment
