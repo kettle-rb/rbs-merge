@@ -73,8 +73,6 @@ rescue LoadError
   end
 end
 
-require "kettle/jem"
-
 
 ### SPEC TASKS
 # Run FFI specs first (before the collision of MRI+FFI backends pollutes the environment),
