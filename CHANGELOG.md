@@ -20,36 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Added shared comment capability and augmenter exposure across the native RBS and tree-sitter-backed paths, with normalized region / attachment access and explicit backend-parity coverage
-
-### Changed
-
-- Adopted the shared `Ast::Merge::Layout` contract for top-level RBS declaration gaps, including shared layout compliance coverage across native and tree-sitter-backed paths
-- Rebased `Rbs::Merge::CommentTracker` onto the shared
-  `Ast::Merge::Comment::HashTrackerBase`, keeping RBS-local extraction and owner
-  association rules in the leaf gem while sharing the tracker core
-- Preserved destination-owned docs and leading comments through template-preferred matched declarations and recursively merged members across the native, Rust, and FFI-backed validation paths
-- Preserved or promoted comments for removed destination-only declarations when `remove_template_missing_nodes: true` is enabled, while keeping destination-relative ordering stable in the documented Phase 2 contract
-- Rebased `Rbs::Merge::FileAligner` onto the shared `Ast::Merge::FileAlignerBase`, leaving RBS-local declaration payload keys plus freeze-node alias/signature and sort behavior in the RBS layer
-- Adopted `Ast::Merge::TrailingGroups::AlignmentSort` for shared template-only RBS declaration ordering while preserving the existing freeze-block-aware destination sort contract
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-- Fixed multi-byte character corruption in RBS text extraction — replaced `byteslice` with `slice` to prevent splitting multi-byte characters (e.g. emoji) at byte boundaries
-
-### Security
-
-- TAG: [v2.0.0][2.0.0t]
-- COVERAGE: 72.31% -- 713/986 lines in 12 files
-- BRANCH COVERAGE: 39.77% -- 208/523 branches in 12 files
-- 98.63% documented
-
-### Added
-
 - AGENTS.md
 - **Dependency Tags Support**: Added `spec/support/dependency_tags.rb` to load shared
   dependency tags from tree_haver and ast-merge. This enables automatic exclusion of
@@ -139,6 +109,8 @@ Please file a bug if you notice a violation of semantic versioning.
   - `max_recursion_depth` parameter is still supported
   - `preference` now accepts Hash for per-type preferences
 
+### Deprecated
+
 ### Removed
 
 - **`FileAnalysis#rbs_gem_available?`** - Removed; TreeHaver handles backend availability
@@ -159,6 +131,13 @@ Please file a bug if you notice a violation of semantic versioning.
   direct `start_line`/`end_line` methods (TreeHaver::Node).
 - **`SmartMerger#get_start_line`/`get_end_line`** - Added helper methods to support
   both NodeWrapper and RBS gem nodes in `reconstruct_declaration_with_merged_members`.
+
+### Security
+
+- TAG: [v2.0.0][2.0.0t]
+- COVERAGE: 72.31% -- 713/986 lines in 12 files
+- BRANCH COVERAGE: 39.77% -- 208/523 branches in 12 files
+- 98.63% documented
 
 ## [1.0.0] - 2025-12-12
 
