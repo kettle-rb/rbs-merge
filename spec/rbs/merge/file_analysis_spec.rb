@@ -1050,10 +1050,12 @@ RSpec.describe Rbs::Merge::FileAnalysis do
         owner = analysis.statements.first
         attachment = analysis.comment_attachment_for(owner)
 
-        expect(attachment.leading_region.nodes.map(&:line_number)).to eq([1])
+        # Line-1 comment separated by a gap is preamble, not owned by the first node
+        expect(attachment.leading_region).to be_nil
 
         augmenter = analysis.comment_augmenter(owners: analysis.statements)
-        expect(augmenter.preamble_region.nil? || augmenter.preamble_region.nodes.empty?).to be(true)
+        expect(augmenter.preamble_region).not_to be_nil
+        expect(augmenter.preamble_region.nodes.map(&:line_number)).to eq([1])
         expect(augmenter.postlude_region.nodes.map(&:line_number)).to eq([6])
       end
     end

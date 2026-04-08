@@ -139,7 +139,7 @@ RSpec.describe Rbs::Merge::CommentTracker do
   end
 
   describe "#leading_comments_before" do
-    it "collects contiguous leading comment blocks across blank lines" do
+    it "strips line-1 preamble, keeps only post-gap comments" do
       tracker = described_class.new([
         "# preamble",
         "",
@@ -149,8 +149,9 @@ RSpec.describe Rbs::Merge::CommentTracker do
 
       leading = tracker.leading_comments_before(4)
 
-      expect(leading.map { |comment| comment[:line] }).to eq([1, 3])
-      expect(leading.map { |comment| comment[:text] }).to eq(["preamble", "class docs"])
+      # Line-1 comment separated by a gap is preamble, not a leading comment
+      expect(leading.map { |comment| comment[:line] }).to eq([3])
+      expect(leading.map { |comment| comment[:text] }).to eq(["class docs"])
     end
 
     it "stops when it reaches a non-comment line" do
