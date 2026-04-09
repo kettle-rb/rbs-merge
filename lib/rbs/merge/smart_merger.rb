@@ -596,7 +596,7 @@ module Rbs
       end
 
       def build_member_signature_map(members, analysis)
-        members.each_with_index.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |(member, idx), map|
+        members.each_with_index.with_object(Hash.new { |hash, key| hash[key] = [] }) do |(member, idx), map|
           signature = member_alignment_signature(member, analysis)
           map[signature] << idx if signature
         end
@@ -709,7 +709,7 @@ module Rbs
 
       def empty_container_header_lines(analysis, start_line:, end_line:)
         return [] unless start_line && end_line
-        return [] unless start_line < end_line
+        return [] if start_line >= end_line
 
         (start_line...end_line).map { |line_number| analysis.line_at(line_number) }
       end
@@ -757,7 +757,7 @@ module Rbs
       end
 
       def leading_region_for(decl, analysis)
-        return unless decl && analysis && analysis.respond_to?(:comment_attachment_for)
+        return unless decl && analysis&.respond_to?(:comment_attachment_for)
 
         attachment = analysis.comment_attachment_for(decl)
         attachment.leading_region if attachment.respond_to?(:leading_region)

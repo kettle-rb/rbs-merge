@@ -215,7 +215,7 @@ module Rbs
       end
 
       def leading_region_for(statement, analysis)
-        return unless statement && analysis && analysis.respond_to?(:comment_attachment_for)
+        return unless statement && analysis&.respond_to?(:comment_attachment_for)
 
         attachment = analysis.comment_attachment_for(statement)
         attachment.leading_region if attachment.respond_to?(:leading_region)

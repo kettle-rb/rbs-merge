@@ -19,7 +19,6 @@ module Rbs
     #     end
     #   end
     class FileAligner < ::Ast::Merge::FileAlignerBase
-
       # @return [FileAnalysis] Template file analysis
       attr_reader :template_analysis
 
