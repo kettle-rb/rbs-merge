@@ -27,6 +27,7 @@ AllCops:
     - tmp/**/*
     - vendor/**/*
     - AGENTS.md
+    - README.md
 
 RBS:
   Enabled: true
