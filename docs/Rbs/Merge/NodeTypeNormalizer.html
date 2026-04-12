@@ -6,7 +6,7 @@
 <title>
   Module: Rbs::Merge::NodeTypeNormalizer
   
-    &mdash; Documentation by YARD 0.9.38
+    &mdash; Documentation by YARD 0.9.39
   
 </title>
 
@@ -243,6 +243,29 @@ the shared Ast::Merge::NodeTyping::Normalizer module.</p>
         <li class="public ">
   <span class="summary_signature">
     
+      <a href="#canonical_type_for_node-class_method" title="canonical_type_for_node (class method)">.<strong>canonical_type_for_node</strong>(node, backend = DEFAULT_BACKEND)  &#x21d2; Symbol<sup>?</sup> </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Get the canonical type for a specific node, allowing node-shape-aware refinement when a backend uses generic wrapper/member node types.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
       <a href="#container_type%3F-class_method" title="container_type? (class method)">.<strong>container_type?</strong>(type)  &#x21d2; Boolean </a>
     
 
@@ -444,15 +467,141 @@ Overrides the shared Normalizer to default to :rbs backend.</p>
       <pre class="lines">
 
 
-237
-238
-239</pre>
+240
+241
+242</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 237</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 240</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_canonical_type'>canonical_type</span><span class='lparen'>(</span><span class='id identifier rubyid_backend_type'>backend_type</span><span class='comma'>,</span> <span class='id identifier rubyid_backend'>backend</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#DEFAULT_BACKEND-constant" title="Rbs::Merge::NodeTypeNormalizer::DEFAULT_BACKEND (constant)">DEFAULT_BACKEND</a></span></span><span class='rparen'>)</span>
   <span class='kw'>super</span><span class='lparen'>(</span><span class='id identifier rubyid_backend_type'>backend_type</span><span class='comma'>,</span> <span class='id identifier rubyid_backend'>backend</span><span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="canonical_type_for_node-class_method">
+  
+    .<strong>canonical_type_for_node</strong>(node, backend = DEFAULT_BACKEND)  &#x21d2; <tt>Symbol</tt><sup>?</sup> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Get the canonical type for a specific node, allowing node-shape-aware<br />
+refinement when a backend uses generic wrapper/member node types.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  <p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>node</span>
+      
+      
+        <span class='type'>(<tt>Object</tt>, <tt>nil</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>Backend node responding to #type and optionally #each</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>backend</span>
+      
+      
+        <span class='type'>(<tt>Symbol</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>DEFAULT_BACKEND</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'><p>Backend identifier</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Symbol</tt>, <tt>nil</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 250</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_canonical_type_for_node'>canonical_type_for_node</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='comma'>,</span> <span class='id identifier rubyid_backend'>backend</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#DEFAULT_BACKEND-constant" title="Rbs::Merge::NodeTypeNormalizer::DEFAULT_BACKEND (constant)">DEFAULT_BACKEND</a></span></span><span class='rparen'>)</span>
+  <span class='kw'>return</span> <span class='kw'>if</span> <span class='id identifier rubyid_node'>node</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span>
+
+  <span class='id identifier rubyid_backend_type'>backend_type</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='id identifier rubyid_backend'>backend</span> <span class='op'>==</span> <span class='symbol'>:tree_sitter</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_node'>node</span><span class='period'>.</span><span class='id identifier rubyid_respond_to?'>respond_to?</span><span class='lparen'>(</span><span class='symbol'>:type</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_node'>node</span><span class='period'>.</span><span class='id identifier rubyid_type'>type</span>
+  <span class='kw'>else</span>
+    <span class='id identifier rubyid_node'>node</span><span class='period'>.</span><span class='id identifier rubyid_class'>class</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_canonical'>canonical</span> <span class='op'>=</span> <span class='id identifier rubyid_canonical_type'>canonical_type</span><span class='lparen'>(</span><span class='id identifier rubyid_backend_type'>backend_type</span><span class='comma'>,</span> <span class='id identifier rubyid_backend'>backend</span><span class='rparen'>)</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_canonical'>canonical</span> <span class='kw'>unless</span> <span class='id identifier rubyid_backend'>backend</span> <span class='op'>==</span> <span class='symbol'>:tree_sitter</span>
+
+  <span class='kw'>case</span> <span class='id identifier rubyid_canonical'>canonical</span>
+  <span class='kw'>when</span> <span class='symbol'>:attribute</span>
+    <span class='id identifier rubyid_refine_tree_sitter_attribute_type'>refine_tree_sitter_attribute_type</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_canonical'>canonical</span>
+  <span class='kw'>when</span> <span class='symbol'>:ivar</span>
+    <span class='id identifier rubyid_refine_tree_sitter_variable_type'>refine_tree_sitter_variable_type</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_canonical'>canonical</span>
+  <span class='kw'>else</span>
+    <span class='id identifier rubyid_canonical'>canonical</span>
+  <span class='kw'>end</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -516,13 +665,13 @@ Overrides the shared Normalizer to default to :rbs backend.</p>
       <pre class="lines">
 
 
-274
-275
-276
-277</pre>
+305
+306
+307
+308</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 274</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 305</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_container_type?'>container_type?</span><span class='lparen'>(</span><span class='id identifier rubyid_type'>type</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_canonical'>canonical</span> <span class='op'>=</span> <span class='id identifier rubyid_type'>type</span><span class='period'>.</span><span class='id identifier rubyid_to_sym'>to_sym</span>
@@ -591,13 +740,13 @@ Also includes :declaration_wrapper which wraps declarations in tree-sitter-rbs</
       <pre class="lines">
 
 
-256
-257
-258
-259</pre>
+287
+288
+289
+290</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 256</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 287</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_declaration_type?'>declaration_type?</span><span class='lparen'>(</span><span class='id identifier rubyid_type'>type</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_canonical'>canonical</span> <span class='op'>=</span> <span class='id identifier rubyid_type'>type</span><span class='period'>.</span><span class='id identifier rubyid_to_sym'>to_sym</span>
@@ -665,13 +814,13 @@ Also includes :declaration_wrapper which wraps declarations in tree-sitter-rbs</
       <pre class="lines">
 
 
-265
-266
-267
-268</pre>
+296
+297
+298
+299</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 265</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 296</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_member_type?'>member_type?</span><span class='lparen'>(</span><span class='id identifier rubyid_type'>type</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_canonical'>canonical</span> <span class='op'>=</span> <span class='id identifier rubyid_type'>type</span><span class='period'>.</span><span class='id identifier rubyid_to_sym'>to_sym</span>
@@ -739,13 +888,13 @@ Also includes :declaration_wrapper which wraps declarations in tree-sitter-rbs</
       <pre class="lines">
 
 
-283
-284
-285
-286</pre>
+314
+315
+316
+317</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 283</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 314</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_type_definition?'>type_definition?</span><span class='lparen'>(</span><span class='id identifier rubyid_type'>type</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_canonical'>canonical</span> <span class='op'>=</span> <span class='id identifier rubyid_type'>type</span><span class='period'>.</span><span class='id identifier rubyid_to_sym'>to_sym</span>
@@ -835,12 +984,12 @@ Overrides the shared Normalizer to default to :rbs backend.</p>
       <pre class="lines">
 
 
-247
-248
-249</pre>
+278
+279
+280</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 247</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/node_type_normalizer.rb', line 278</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_wrap'>wrap</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='comma'>,</span> <span class='id identifier rubyid_backend'>backend</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#DEFAULT_BACKEND-constant" title="Rbs::Merge::NodeTypeNormalizer::DEFAULT_BACKEND (constant)">DEFAULT_BACKEND</a></span></span><span class='rparen'>)</span>
   <span class='kw'>super</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='comma'>,</span> <span class='id identifier rubyid_backend'>backend</span><span class='rparen'>)</span>
@@ -855,9 +1004,9 @@ Overrides the shared Normalizer to default to :rbs backend.</p>
 </div>
 
       <div id="footer">
-  Generated on Thu Feb 19 09:35:09 2026 by
+  Generated on Sun Apr 12 11:49:40 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.38 (ruby-4.0.1).
+  0.9.39 (ruby-4.0.2).
 </div>
 
     </div>

@@ -6,7 +6,7 @@
 <title>
   Class: Rbs::Merge::ConflictResolver
   
-    &mdash; Documentation by YARD 0.9.38
+    &mdash; Documentation by YARD 0.9.39
   
 </title>
 
@@ -474,7 +474,8 @@ for per-node-type preferences</p>
 108
 109
 110
-111</pre>
+111
+112</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/rbs/merge/conflict_resolver.rb', line 98</span>
@@ -490,8 +491,9 @@ for per-node-type preferences</p>
 </span>  <span class='kw'>return</span> <span class='kw'>false</span> <span class='kw'>unless</span> <span class='id identifier rubyid_template_type'>template_type</span> <span class='op'>==</span> <span class='id identifier rubyid_dest_type'>dest_type</span>
   <span class='kw'>return</span> <span class='kw'>false</span> <span class='kw'>unless</span> <span class='const'><span class='object_link'><a href="NodeTypeNormalizer.html" title="Rbs::Merge::NodeTypeNormalizer (module)">NodeTypeNormalizer</a></span></span><span class='period'>.</span><span class='id identifier rubyid_container_type?'><span class='object_link'><a href="NodeTypeNormalizer.html#container_type%3F-class_method" title="Rbs::Merge::NodeTypeNormalizer.container_type? (method)">container_type?</a></span></span><span class='lparen'>(</span><span class='id identifier rubyid_template_type'>template_type</span><span class='rparen'>)</span>
 
-  <span class='comment'># Both must have members
-</span>  <span class='id identifier rubyid_has_members?'>has_members?</span><span class='lparen'>(</span><span class='id identifier rubyid_template_decl'>template_decl</span><span class='rparen'>)</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_has_members?'>has_members?</span><span class='lparen'>(</span><span class='id identifier rubyid_dest_decl'>dest_decl</span><span class='rparen'>)</span>
+  <span class='comment'># At least one side must have members so recursive merging can preserve
+</span>  <span class='comment'># destination-only or template-only nested members inside the matched shell.
+</span>  <span class='id identifier rubyid_has_members?'>has_members?</span><span class='lparen'>(</span><span class='id identifier rubyid_template_decl'>template_decl</span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_has_members?'>has_members?</span><span class='lparen'>(</span><span class='id identifier rubyid_dest_decl'>dest_decl</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -787,9 +789,9 @@ for per-node-type preferences</p>
 </div>
 
       <div id="footer">
-  Generated on Thu Feb 19 09:35:10 2026 by
+  Generated on Sun Apr 12 11:49:40 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.38 (ruby-4.0.1).
+  0.9.39 (ruby-4.0.2).
 </div>
 
     </div>

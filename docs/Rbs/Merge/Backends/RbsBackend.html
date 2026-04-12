@@ -6,7 +6,7 @@
 <title>
   Module: Rbs::Merge::Backends::RbsBackend
   
-    &mdash; Documentation by YARD 0.9.38
+    &mdash; Documentation by YARD 0.9.39
   
 </title>
 
@@ -101,8 +101,7 @@
 <p>RBS gem backend using Ruby’s official RBS parser</p>
 
 <p>This backend wraps the RBS gem, Ruby’s official type signature parser.<br />
-Unlike tree-sitter backends which are language-agnostic runtime parsers,<br />
-the RBS gem is specifically designed for parsing RBS type signature files.</p>
+The RBS gem is specifically designed for parsing RBS type signature files.</p>
 
 <p>The RBS gem provides:</p>
 <ul>
@@ -266,8 +265,7 @@ the RBS gem is specifically designed for parsing RBS type signature files.</p>
   <div class="discussion">
     <p>Check if the RBS backend is available</p>
 
-<p>Attempts to require rbs on first call and caches the result.<br />
-The RBS gem only works on MRI Ruby (C extension).</p>
+<p>Attempts to require rbs on first call and caches the result.</p>
 
 
   </div>
@@ -308,6 +306,8 @@ The RBS gem only works on MRI Ruby (C extension).</p>
       <pre class="lines">
 
 
+48
+49
 50
 51
 52
@@ -321,12 +321,10 @@ The RBS gem only works on MRI Ruby (C extension).</p>
 60
 61
 62
-63
-64
-65</pre>
+63</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/backends/rbs_backend.rb', line 50</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/backends/rbs_backend.rb', line 48</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_available?'>available?</span>
   <span class='kw'>return</span> <span class='ivar'>@loaded</span> <span class='kw'>if</span> <span class='ivar'>@load_attempted</span> <span class='comment'># rubocop:disable ThreadSafety/ClassInstanceVariable
@@ -400,6 +398,8 @@ The RBS gem only works on MRI Ruby (C extension).</p>
       <pre class="lines">
 
 
+80
+81
 82
 83
 84
@@ -410,12 +410,10 @@ The RBS gem only works on MRI Ruby (C extension).</p>
 89
 90
 91
-92
-93
-94</pre>
+92</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/backends/rbs_backend.rb', line 82</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/backends/rbs_backend.rb', line 80</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_capabilities'>capabilities</span>
   <span class='kw'>return</span> <span class='lbrace'>{</span><span class='rbrace'>}</span> <span class='kw'>unless</span> <span class='id identifier rubyid_available?'>available?</span>
@@ -464,13 +462,13 @@ The RBS gem only works on MRI Ruby (C extension).</p>
       <pre class="lines">
 
 
+69
+70
 71
-72
-73
-74</pre>
+72</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/backends/rbs_backend.rb', line 71</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/backends/rbs_backend.rb', line 69</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_reset!'>reset!</span>
   <span class='ivar'>@load_attempted</span> <span class='op'>=</span> <span class='kw'>false</span> <span class='comment'># rubocop:disable ThreadSafety/ClassInstanceVariable
@@ -486,9 +484,9 @@ The RBS gem only works on MRI Ruby (C extension).</p>
 </div>
 
       <div id="footer">
-  Generated on Thu Feb 19 09:35:09 2026 by
+  Generated on Sun Apr 12 11:49:39 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.38 (ruby-4.0.1).
+  0.9.39 (ruby-4.0.2).
 </div>
 
     </div>

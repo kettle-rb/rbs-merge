@@ -6,7 +6,7 @@
 <title>
   Class: Rbs::Merge::FileAnalysis
   
-    &mdash; Documentation by YARD 0.9.38
+    &mdash; Documentation by YARD 0.9.39
   
 </title>
 
@@ -249,6 +249,34 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
       <li class="public ">
   <span class="summary_signature">
     
+      <a href="#comment_tracker-instance_method" title="#comment_tracker (instance method)">#<strong>comment_tracker</strong>  &#x21d2; CommentTracker </a>
+    
+
+    
+  </span>
+  
+  
+  
+    
+      <span class="note title readonly">readonly</span>
+    
+    
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Comment tracker for this file.</p>
+</div></span>
+  
+</li>
+
+    
+      <li class="public ">
+  <span class="summary_signature">
+    
       <a href="#declarations-instance_method" title="#declarations (instance method)">#<strong>declarations</strong>  &#x21d2; Array </a>
     
 
@@ -370,6 +398,144 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
     </h2>
 
     <ul class="summary">
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#comment_attachment_for-instance_method" title="#comment_attachment_for (instance method)">#<strong>comment_attachment_for</strong>(owner, **options)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Build a passive shared comment attachment for an owner.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#comment_augmenter-instance_method" title="#comment_augmenter (instance method)">#<strong>comment_augmenter</strong>(owners: nil, **options)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Build a passive shared comment augmenter for this analysis.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#comment_capability-instance_method" title="#comment_capability (instance method)">#<strong>comment_capability</strong>  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Get shared comment capability information for this analysis.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#comment_node_at-instance_method" title="#comment_node_at (instance method)">#<strong>comment_node_at</strong>(line_num)  &#x21d2; Object<sup>?</sup> </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Get a shared comment node at a specific line.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#comment_nodes-instance_method" title="#comment_nodes (instance method)">#<strong>comment_nodes</strong>  &#x21d2; Array </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Get all tracked comments converted to shared comment nodes.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#comment_region_for_range-instance_method" title="#comment_region_for_range (instance method)">#<strong>comment_region_for_range</strong>(range, kind:, full_line_only: false)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Get comments in a line range converted to a shared comment region.</p>
+</div></span>
+  
+</li>
+
       
         <li class="public ">
   <span class="summary_signature">
@@ -632,7 +798,7 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
       
       
         &mdash;
-        <div class='inline'><p>Additional options (forward compatibility)</p>
+        <div class='inline'><p>Additional options</p>
 </div>
       
     </li>
@@ -646,9 +812,6 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
       <pre class="lines">
 
 
-56
-57
-58
 59
 60
 61
@@ -671,10 +834,14 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
 78
 79
 80
-81</pre>
+81
+82
+83
+84
+85</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 56</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 59</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='id identifier rubyid_source'>source</span><span class='comma'>,</span> <span class='label'>freeze_token:</span> <span class='const'><span class='object_link'><a href="#DEFAULT_FREEZE_TOKEN-constant" title="Rbs::Merge::FileAnalysis::DEFAULT_FREEZE_TOKEN (constant)">DEFAULT_FREEZE_TOKEN</a></span></span><span class='comma'>,</span> <span class='label'>signature_generator:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
   <span class='ivar'>@source</span> <span class='op'>=</span> <span class='id identifier rubyid_source'>source</span>
@@ -686,6 +853,7 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
 </span>  <span class='ivar'>@directives</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
   <span class='ivar'>@declarations</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
   <span class='ivar'>@ast</span> <span class='op'>=</span> <span class='kw'>nil</span>
+  <span class='ivar'>@comment_tracker</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="CommentTracker.html" title="Rbs::Merge::CommentTracker (class)">CommentTracker</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="CommentTracker.html#initialize-instance_method" title="Rbs::Merge::CommentTracker#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='ivar'>@lines</span><span class='comma'>,</span> <span class='label'>freeze_token:</span> <span class='id identifier rubyid_freeze_token'>freeze_token</span><span class='rparen'>)</span>
 
   <span class='comment'># Parse the RBS source
 </span>  <span class='const'><span class='object_link'><a href="DebugLogger.html" title="Rbs::Merge::DebugLogger (module)">DebugLogger</a></span></span><span class='period'>.</span><span class='id identifier rubyid_time'>time</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>FileAnalysis#parse</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_parse_rbs'>parse_rbs</span> <span class='rbrace'>}</span>
@@ -824,6 +992,65 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
 
 <span class='kw'>def</span> <span class='id identifier rubyid_backend'>backend</span>
   <span class='ivar'>@backend</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      
+      <span id=""></span>
+      <div class="method_details ">
+  <h3 class="signature " id="comment_tracker-instance_method">
+  
+    #<strong>comment_tracker</strong>  &#x21d2; <tt><span class='object_link'><a href="CommentTracker.html" title="Rbs::Merge::CommentTracker (class)">CommentTracker</a></span></tt>  <span class="extras">(readonly)</span>
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Returns Comment tracker for this file.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt><span class='object_link'><a href="CommentTracker.html" title="Rbs::Merge::CommentTracker (class)">CommentTracker</a></span></tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>Comment tracker for this file</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+46
+47
+48</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 46</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_comment_tracker'>comment_tracker</span>
+  <span class='ivar'>@comment_tracker</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -1047,12 +1274,12 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
       <pre class="lines">
 
 
-93
-94
-95</pre>
+154
+155
+156</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 93</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 154</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_statements'>statements</span>
   <span class='ivar'>@statements</span>
@@ -1070,7 +1297,479 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
 
     
       <div class="method_details first">
-  <h3 class="signature first" id="compute_node_signature-instance_method">
+  <h3 class="signature first" id="comment_attachment_for-instance_method">
+  
+    #<strong>comment_attachment_for</strong>(owner, **options)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Build a passive shared comment attachment for an owner.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  <p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>owner</span>
+      
+      
+        <span class='type'>(<tt>Object</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>Structural owner for the attachment</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>options</span>
+      
+      
+        <span class='type'>(<tt>Hash</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>Additional metadata / lookup overrides</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Object</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+136
+137
+138</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 136</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_comment_attachment_for'>comment_attachment_for</span><span class='lparen'>(</span><span class='id identifier rubyid_owner'>owner</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_comment_tracker'>comment_tracker</span><span class='period'>.</span><span class='id identifier rubyid_comment_attachment_for'>comment_attachment_for</span><span class='lparen'>(</span><span class='id identifier rubyid_owner'>owner</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="comment_augmenter-instance_method">
+  
+    #<strong>comment_augmenter</strong>(owners: nil, **options)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Build a passive shared comment augmenter for this analysis.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  <p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>owners</span>
+      
+      
+        <span class='type'>(<tt>Array&lt;#start_line,#end_line&gt;</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'><p>Owners used for attachment inference</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>options</span>
+      
+      
+        <span class='type'>(<tt>Hash</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>Additional augmenter options</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Object</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+145
+146
+147
+148
+149
+150</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 145</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_comment_augmenter'>comment_augmenter</span><span class='lparen'>(</span><span class='label'>owners:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_comment_tracker'>comment_tracker</span><span class='period'>.</span><span class='id identifier rubyid_augment'>augment</span><span class='lparen'>(</span>
+    <span class='label'>owners:</span> <span class='id identifier rubyid_owners'>owners</span> <span class='op'>||</span> <span class='id identifier rubyid_comment_augmenter_default_owners'>comment_augmenter_default_owners</span><span class='comma'>,</span>
+    <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='comma'>,</span>
+  <span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="comment_capability-instance_method">
+  
+    #<strong>comment_capability</strong>  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Get shared comment capability information for this analysis.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Object</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+98
+99
+100</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 98</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_comment_capability'>comment_capability</span>
+  <span class='ivar'>@comment_capability</span> <span class='op'>||=</span> <span class='id identifier rubyid_comment_tracker'>comment_tracker</span><span class='period'>.</span><span class='id identifier rubyid_augment'>augment</span><span class='lparen'>(</span><span class='label'>owners:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_capability'>capability</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="comment_node_at-instance_method">
+  
+    #<strong>comment_node_at</strong>(line_num)  &#x21d2; <tt>Object</tt><sup>?</sup> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Get a shared comment node at a specific line.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  <p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>line_num</span>
+      
+      
+        <span class='type'>(<tt>Integer</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>1-based line number</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Object</tt>, <tt>nil</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+113
+114
+115</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 113</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_comment_node_at'>comment_node_at</span><span class='lparen'>(</span><span class='id identifier rubyid_line_num'>line_num</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_comment_tracker'>comment_tracker</span><span class='period'>.</span><span class='id identifier rubyid_comment_node_at'>comment_node_at</span><span class='lparen'>(</span><span class='id identifier rubyid_line_num'>line_num</span><span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="comment_nodes-instance_method">
+  
+    #<strong>comment_nodes</strong>  &#x21d2; <tt>Array</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Get all tracked comments converted to shared comment nodes.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Array</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+105
+106
+107</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 105</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_comment_nodes'>comment_nodes</span>
+  <span class='id identifier rubyid_comment_tracker'>comment_tracker</span><span class='period'>.</span><span class='id identifier rubyid_comment_nodes'>comment_nodes</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="comment_region_for_range-instance_method">
+  
+    #<strong>comment_region_for_range</strong>(range, kind:, full_line_only: false)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Get comments in a line range converted to a shared comment region.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  <p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>range</span>
+      
+      
+        <span class='type'>(<tt>Range</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>Range of 1-based line numbers</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>kind</span>
+      
+      
+        <span class='type'>(<tt>Symbol</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>Region kind</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>full_line_only</span>
+      
+      
+        <span class='type'>(<tt>Boolean</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>false</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'><p>Whether to keep only full-line comments</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Object</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+123
+124
+125
+126
+127
+128
+129</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 123</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_comment_region_for_range'>comment_region_for_range</span><span class='lparen'>(</span><span class='id identifier rubyid_range'>range</span><span class='comma'>,</span> <span class='label'>kind:</span><span class='comma'>,</span> <span class='label'>full_line_only:</span> <span class='kw'>false</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_comment_tracker'>comment_tracker</span><span class='period'>.</span><span class='id identifier rubyid_comment_region_for_range'>comment_region_for_range</span><span class='lparen'>(</span>
+    <span class='id identifier rubyid_range'>range</span><span class='comma'>,</span>
+    <span class='label'>kind:</span> <span class='id identifier rubyid_kind'>kind</span><span class='comma'>,</span>
+    <span class='label'>full_line_only:</span> <span class='id identifier rubyid_full_line_only'>full_line_only</span><span class='comma'>,</span>
+  <span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="compute_node_signature-instance_method">
   
     #<strong>compute_node_signature</strong>(node)  &#x21d2; <tt>Array</tt><sup>?</sup> 
   
@@ -1130,26 +1829,29 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
       <pre class="lines">
 
 
-117
-118
-119
-120
-121
-122
-123
-124
-125
-126
-127
-128
-129
-130
-131
-132
-133</pre>
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 117</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 178</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_compute_node_signature'>compute_node_signature</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>if</span> <span class='id identifier rubyid_node'>node</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span>
@@ -1160,8 +1862,11 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
   <span class='kw'>when</span> <span class='const'><span class='object_link'><a href="NodeWrapper.html" title="Rbs::Merge::NodeWrapper (class)">NodeWrapper</a></span></span>
     <span class='id identifier rubyid_node'>node</span><span class='period'>.</span><span class='id identifier rubyid_signature'>signature</span>
   <span class='kw'>else</span>
-    <span class='comment'># For raw TreeHaver::Node (tree-sitter) or RBS gem nodes
-</span>    <span class='kw'>if</span> <span class='ivar'>@backend</span> <span class='op'>==</span> <span class='symbol'>:tree_sitter</span> <span class='op'>||</span> <span class='id identifier rubyid_node'>node</span><span class='period'>.</span><span class='id identifier rubyid_respond_to?'>respond_to?</span><span class='lparen'>(</span><span class='symbol'>:type</span><span class='rparen'>)</span>
+    <span class='comment'># Raw declarations/members from the RBS gem frequently respond to #type
+</span>    <span class='comment'># as part of their own AST API, so backend selection must stay authoritative
+</span>    <span class='comment'># here. Otherwise frozen contained RBS declarations are misrouted through the
+</span>    <span class='comment'># tree-sitter signature path and become unmatchable.
+</span>    <span class='kw'>if</span> <span class='ivar'>@backend</span> <span class='op'>==</span> <span class='symbol'>:tree_sitter</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_node'>node</span><span class='period'>.</span><span class='id identifier rubyid_respond_to?'>respond_to?</span><span class='lparen'>(</span><span class='symbol'>:type</span><span class='rparen'>)</span>
       <span class='id identifier rubyid_compute_tree_sitter_signature'>compute_tree_sitter_signature</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='rparen'>)</span>
     <span class='kw'>else</span>
       <span class='id identifier rubyid_compute_rbs_gem_signature'>compute_rbs_gem_signature</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='rparen'>)</span>
@@ -1234,35 +1939,39 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
       <pre class="lines">
 
 
-138
-139
-140
-141
-142
-143
-144
-145
-146
-147
-148
-149
-150
-151
-152
-153
-154
-155
-156
-157
-158
-159
-160
-161
-162
-163</pre>
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 138</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 202</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_compute_tree_sitter_signature'>compute_tree_sitter_signature</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_node_type'>node_type</span> <span class='op'>=</span> <span class='id identifier rubyid_node'>node</span><span class='period'>.</span><span class='id identifier rubyid_respond_to?'>respond_to?</span><span class='lparen'>(</span><span class='symbol'>:type</span><span class='rparen'>)</span> <span class='op'>?</span> <span class='id identifier rubyid_node'>node</span><span class='period'>.</span><span class='id identifier rubyid_type'>type</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span> <span class='op'>:</span> <span class='kw'>nil</span>
@@ -1284,6 +1993,10 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
     <span class='lbracket'>[</span><span class='symbol'>:constant</span><span class='comma'>,</span> <span class='id identifier rubyid_name'>name</span> <span class='op'>||</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>anonymous</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>
   <span class='kw'>when</span> <span class='symbol'>:global</span>
     <span class='lbracket'>[</span><span class='symbol'>:global</span><span class='comma'>,</span> <span class='id identifier rubyid_name'>name</span> <span class='op'>||</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>anonymous</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>
+  <span class='kw'>when</span> <span class='symbol'>:class_alias</span>
+    <span class='lbracket'>[</span><span class='symbol'>:class_alias</span><span class='comma'>,</span> <span class='id identifier rubyid_name'>name</span> <span class='op'>||</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>anonymous</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>
+  <span class='kw'>when</span> <span class='symbol'>:module_alias</span>
+    <span class='lbracket'>[</span><span class='symbol'>:module_alias</span><span class='comma'>,</span> <span class='id identifier rubyid_name'>name</span> <span class='op'>||</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>anonymous</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>
   <span class='kw'>when</span> <span class='symbol'>:method</span>
     <span class='lbracket'>[</span><span class='symbol'>:method</span><span class='comma'>,</span> <span class='id identifier rubyid_name'>name</span> <span class='op'>||</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>anonymous</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>
   <span class='kw'>else</span>
@@ -1352,41 +2065,41 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
       <pre class="lines">
 
 
-168
-169
-170
-171
-172
-173
-174
-175
-176
-177
-178
-179
-180
-181
-182
-183
-184
-185
-186
-187
-188
-189
-190
-191
-192
-193
-194
-195
-196
-197
-198
-199</pre>
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 168</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 236</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_extract_tree_sitter_node_name'>extract_tree_sitter_node_name</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='id identifier rubyid_node'>node</span><span class='period'>.</span><span class='id identifier rubyid_respond_to?'>respond_to?</span><span class='lparen'>(</span><span class='symbol'>:each</span><span class='rparen'>)</span>
@@ -1486,21 +2199,21 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
       <pre class="lines">
 
 
-204
-205
-206
-207
-208
-209
-210
-211
-212
-213
-214
-215</pre>
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 204</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 272</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_fallthrough_node?'>fallthrough_node?</span><span class='lparen'>(</span><span class='id identifier rubyid_value'>value</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>true</span> <span class='kw'>if</span> <span class='id identifier rubyid_value'>value</span><span class='period'>.</span><span class='id identifier rubyid_is_a?'>is_a?</span><span class='lparen'>(</span><span class='const'><span class='object_link'><a href="NodeWrapper.html" title="Rbs::Merge::NodeWrapper (class)">NodeWrapper</a></span></span><span class='rparen'>)</span>
@@ -1557,25 +2270,25 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
       <pre class="lines">
 
 
-97
-98
-99
-100
-101
-102
-103
-104
-105
-106
-107
-108
-109
-110
-111
-112</pre>
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 97</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 158</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_root_node'>root_node</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='id identifier rubyid_valid?'>valid?</span>
@@ -1636,14 +2349,14 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
       <pre class="lines">
 
 
-85
-86
-87
-88
-89</pre>
+89
+90
+91
+92
+93</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 85</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_analysis.rb', line 89</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_valid?'>valid?</span>
   <span class='kw'>return</span> <span class='kw'>false</span> <span class='kw'>unless</span> <span class='ivar'>@errors</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
@@ -1660,9 +2373,9 @@ Supports multiple backends: RBS gem (MRI only) and tree-sitter-rbs (cross-platfo
 </div>
 
       <div id="footer">
-  Generated on Thu Feb 19 09:35:10 2026 by
+  Generated on Sun Apr 12 11:49:40 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.38 (ruby-4.0.1).
+  0.9.39 (ruby-4.0.2).
 </div>
 
     </div>

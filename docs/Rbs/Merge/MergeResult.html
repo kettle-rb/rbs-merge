@@ -6,7 +6,7 @@
 <title>
   Class: Rbs::Merge::MergeResult
   
-    &mdash; Documentation by YARD 0.9.38
+    &mdash; Documentation by YARD 0.9.39
   
 </title>
 
@@ -328,7 +328,7 @@ methods to reconstruct the final merged RBS file.</p>
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#add_from_destination-instance_method" title="#add_from_destination (instance method)">#<strong>add_from_destination</strong>(index, decision: DECISION_DESTINATION)  &#x21d2; void </a>
+      <a href="#add_from_destination-instance_method" title="#add_from_destination (instance method)">#<strong>add_from_destination</strong>(index, decision: DECISION_DESTINATION, comment_source_statement: nil, comment_source_analysis: nil)  &#x21d2; void </a>
     
 
     
@@ -351,7 +351,7 @@ methods to reconstruct the final merged RBS file.</p>
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#add_from_template-instance_method" title="#add_from_template (instance method)">#<strong>add_from_template</strong>(index, decision: DECISION_TEMPLATE)  &#x21d2; void </a>
+      <a href="#add_from_template-instance_method" title="#add_from_template (instance method)">#<strong>add_from_template</strong>(index, decision: DECISION_TEMPLATE, comment_source_statement: nil, comment_source_analysis: nil)  &#x21d2; void </a>
     
 
     
@@ -594,13 +594,15 @@ methods to reconstruct the final merged RBS file.</p>
 
 43
 44
-45</pre>
+45
+46</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 43</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='id identifier rubyid_template_analysis'>template_analysis</span><span class='comma'>,</span> <span class='id identifier rubyid_dest_analysis'>dest_analysis</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
   <span class='kw'>super</span><span class='lparen'>(</span><span class='label'>template_analysis:</span> <span class='id identifier rubyid_template_analysis'>template_analysis</span><span class='comma'>,</span> <span class='label'>dest_analysis:</span> <span class='id identifier rubyid_dest_analysis'>dest_analysis</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+  <span class='ivar'>@emitted_freeze_blocks</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -658,17 +660,6 @@ methods to reconstruct the final merged RBS file.</p>
       <pre class="lines">
 
 
-76
-77
-78
-79
-80
-81
-82
-83
-84
-85
-86
 87
 88
 89
@@ -677,19 +668,34 @@ methods to reconstruct the final merged RBS file.</p>
 92
 93
 94
-95</pre>
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 76</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 87</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_add_freeze_block'>add_freeze_block</span><span class='lparen'>(</span><span class='id identifier rubyid_freeze_node'>freeze_node</span><span class='rparen'>)</span>
   <span class='comment'># Use the freeze_node&#39;s own analysis to get the correct content
 </span>  <span class='comment'># (template freeze blocks should use template lines, dest freeze blocks use dest lines)
 </span>  <span class='id identifier rubyid_source_analysis'>source_analysis</span> <span class='op'>=</span> <span class='id identifier rubyid_freeze_node'>freeze_node</span><span class='period'>.</span><span class='id identifier rubyid_analysis'>analysis</span>
-  <span class='id identifier rubyid_lines'>lines</span> <span class='op'>=</span> <span class='lparen'>(</span><span class='id identifier rubyid_freeze_node'>freeze_node</span><span class='period'>.</span><span class='id identifier rubyid_start_line'>start_line</span><span class='op'>..</span><span class='id identifier rubyid_freeze_node'>freeze_node</span><span class='period'>.</span><span class='id identifier rubyid_end_line'>end_line</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_ln'>ln</span><span class='op'>|</span>
-    <span class='id identifier rubyid_source_analysis'>source_analysis</span><span class='period'>.</span><span class='id identifier rubyid_line_at'>line_at</span><span class='lparen'>(</span><span class='id identifier rubyid_ln'>ln</span><span class='rparen'>)</span>
-  <span class='kw'>end</span>
+  <span class='id identifier rubyid_freeze_key'>freeze_key</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='id identifier rubyid_source_analysis'>source_analysis</span><span class='period'>.</span><span class='id identifier rubyid_object_id'>object_id</span><span class='comma'>,</span> <span class='id identifier rubyid_freeze_node'>freeze_node</span><span class='period'>.</span><span class='id identifier rubyid_start_line'>start_line</span><span class='comma'>,</span> <span class='id identifier rubyid_freeze_node'>freeze_node</span><span class='period'>.</span><span class='id identifier rubyid_end_line'>end_line</span><span class='rbracket'>]</span>
+  <span class='kw'>return</span> <span class='kw'>if</span> <span class='ivar'>@emitted_freeze_blocks</span><span class='lbracket'>[</span><span class='id identifier rubyid_freeze_key'>freeze_key</span><span class='rbracket'>]</span>
+
+  <span class='id identifier rubyid_lines'>lines</span> <span class='op'>=</span> <span class='id identifier rubyid_extract_lines'>extract_lines</span><span class='lparen'>(</span><span class='id identifier rubyid_freeze_node'>freeze_node</span><span class='comma'>,</span> <span class='id identifier rubyid_source_analysis'>source_analysis</span><span class='rparen'>)</span>
   <span class='ivar'>@lines</span><span class='period'>.</span><span class='id identifier rubyid_concat'>concat</span><span class='lparen'>(</span><span class='id identifier rubyid_lines'>lines</span><span class='rparen'>)</span>
+  <span class='ivar'>@emitted_freeze_blocks</span><span class='lbracket'>[</span><span class='id identifier rubyid_freeze_key'>freeze_key</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='kw'>true</span>
 
   <span class='comment'># Determine source based on which analysis the freeze_node belongs to
 </span>  <span class='id identifier rubyid_source'>source</span> <span class='op'>=</span> <span class='lparen'>(</span><span class='id identifier rubyid_source_analysis'>source_analysis</span> <span class='op'>==</span> <span class='ivar'>@template_analysis</span><span class='rparen'>)</span> <span class='op'>?</span> <span class='symbol'>:template</span> <span class='op'>:</span> <span class='symbol'>:destination</span>
@@ -710,7 +716,7 @@ methods to reconstruct the final merged RBS file.</p>
       <div class="method_details ">
   <h3 class="signature " id="add_from_destination-instance_method">
   
-    #<strong>add_from_destination</strong>(index, decision: DECISION_DESTINATION)  &#x21d2; <tt>void</tt> 
+    #<strong>add_from_destination</strong>(index, decision: DECISION_DESTINATION, comment_source_statement: nil, comment_source_analysis: nil)  &#x21d2; <tt>void</tt> 
   
 
   
@@ -768,23 +774,33 @@ methods to reconstruct the final merged RBS file.</p>
       <pre class="lines">
 
 
-64
-65
-66
-67
-68
-69
 70
-71</pre>
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 64</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 70</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_add_from_destination'>add_from_destination</span><span class='lparen'>(</span><span class='id identifier rubyid_index'>index</span><span class='comma'>,</span> <span class='label'>decision:</span> <span class='const'><span class='object_link'><a href="#DECISION_DESTINATION-constant" title="Rbs::Merge::MergeResult::DECISION_DESTINATION (constant)">DECISION_DESTINATION</a></span></span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_add_from_destination'>add_from_destination</span><span class='lparen'>(</span><span class='id identifier rubyid_index'>index</span><span class='comma'>,</span> <span class='label'>decision:</span> <span class='const'><span class='object_link'><a href="#DECISION_DESTINATION-constant" title="Rbs::Merge::MergeResult::DECISION_DESTINATION (constant)">DECISION_DESTINATION</a></span></span><span class='comma'>,</span> <span class='label'>comment_source_statement:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>comment_source_analysis:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_statement'>statement</span> <span class='op'>=</span> <span class='ivar'>@dest_analysis</span><span class='period'>.</span><span class='id identifier rubyid_statements'>statements</span><span class='lbracket'>[</span><span class='id identifier rubyid_index'>index</span><span class='rbracket'>]</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='id identifier rubyid_statement'>statement</span>
 
-  <span class='id identifier rubyid_lines'>lines</span> <span class='op'>=</span> <span class='id identifier rubyid_extract_lines'>extract_lines</span><span class='lparen'>(</span><span class='id identifier rubyid_statement'>statement</span><span class='comma'>,</span> <span class='ivar'>@dest_analysis</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_lines'>lines</span> <span class='op'>=</span> <span class='id identifier rubyid_extract_lines'>extract_lines</span><span class='lparen'>(</span>
+    <span class='id identifier rubyid_statement'>statement</span><span class='comma'>,</span>
+    <span class='ivar'>@dest_analysis</span><span class='comma'>,</span>
+    <span class='label'>comment_source_statement:</span> <span class='id identifier rubyid_comment_source_statement'>comment_source_statement</span><span class='comma'>,</span>
+    <span class='label'>comment_source_analysis:</span> <span class='id identifier rubyid_comment_source_analysis'>comment_source_analysis</span><span class='comma'>,</span>
+  <span class='rparen'>)</span>
   <span class='ivar'>@lines</span><span class='period'>.</span><span class='id identifier rubyid_concat'>concat</span><span class='lparen'>(</span><span class='id identifier rubyid_lines'>lines</span><span class='rparen'>)</span>
   <span class='ivar'>@decisions</span> <span class='op'>&lt;&lt;</span> <span class='lbrace'>{</span><span class='label'>decision:</span> <span class='id identifier rubyid_decision'>decision</span><span class='comma'>,</span> <span class='label'>source:</span> <span class='symbol'>:destination</span><span class='comma'>,</span> <span class='label'>index:</span> <span class='id identifier rubyid_index'>index</span><span class='comma'>,</span> <span class='label'>lines:</span> <span class='id identifier rubyid_lines'>lines</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span><span class='rbrace'>}</span>
 <span class='kw'>end</span></pre>
@@ -796,7 +812,7 @@ methods to reconstruct the final merged RBS file.</p>
       <div class="method_details ">
   <h3 class="signature " id="add_from_template-instance_method">
   
-    #<strong>add_from_template</strong>(index, decision: DECISION_TEMPLATE)  &#x21d2; <tt>void</tt> 
+    #<strong>add_from_template</strong>(index, decision: DECISION_TEMPLATE, comment_source_statement: nil, comment_source_analysis: nil)  &#x21d2; <tt>void</tt> 
   
 
   
@@ -854,23 +870,33 @@ methods to reconstruct the final merged RBS file.</p>
       <pre class="lines">
 
 
-51
 52
 53
 54
 55
 56
 57
-58</pre>
+58
+59
+60
+61
+62
+63
+64</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 51</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 52</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_add_from_template'>add_from_template</span><span class='lparen'>(</span><span class='id identifier rubyid_index'>index</span><span class='comma'>,</span> <span class='label'>decision:</span> <span class='const'><span class='object_link'><a href="#DECISION_TEMPLATE-constant" title="Rbs::Merge::MergeResult::DECISION_TEMPLATE (constant)">DECISION_TEMPLATE</a></span></span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_add_from_template'>add_from_template</span><span class='lparen'>(</span><span class='id identifier rubyid_index'>index</span><span class='comma'>,</span> <span class='label'>decision:</span> <span class='const'><span class='object_link'><a href="#DECISION_TEMPLATE-constant" title="Rbs::Merge::MergeResult::DECISION_TEMPLATE (constant)">DECISION_TEMPLATE</a></span></span><span class='comma'>,</span> <span class='label'>comment_source_statement:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>comment_source_analysis:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_statement'>statement</span> <span class='op'>=</span> <span class='ivar'>@template_analysis</span><span class='period'>.</span><span class='id identifier rubyid_statements'>statements</span><span class='lbracket'>[</span><span class='id identifier rubyid_index'>index</span><span class='rbracket'>]</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='id identifier rubyid_statement'>statement</span>
 
-  <span class='id identifier rubyid_lines'>lines</span> <span class='op'>=</span> <span class='id identifier rubyid_extract_lines'>extract_lines</span><span class='lparen'>(</span><span class='id identifier rubyid_statement'>statement</span><span class='comma'>,</span> <span class='ivar'>@template_analysis</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_lines'>lines</span> <span class='op'>=</span> <span class='id identifier rubyid_extract_lines'>extract_lines</span><span class='lparen'>(</span>
+    <span class='id identifier rubyid_statement'>statement</span><span class='comma'>,</span>
+    <span class='ivar'>@template_analysis</span><span class='comma'>,</span>
+    <span class='label'>comment_source_statement:</span> <span class='id identifier rubyid_comment_source_statement'>comment_source_statement</span><span class='comma'>,</span>
+    <span class='label'>comment_source_analysis:</span> <span class='id identifier rubyid_comment_source_analysis'>comment_source_analysis</span><span class='comma'>,</span>
+  <span class='rparen'>)</span>
   <span class='ivar'>@lines</span><span class='period'>.</span><span class='id identifier rubyid_concat'>concat</span><span class='lparen'>(</span><span class='id identifier rubyid_lines'>lines</span><span class='rparen'>)</span>
   <span class='ivar'>@decisions</span> <span class='op'>&lt;&lt;</span> <span class='lbrace'>{</span><span class='label'>decision:</span> <span class='id identifier rubyid_decision'>decision</span><span class='comma'>,</span> <span class='label'>source:</span> <span class='symbol'>:template</span><span class='comma'>,</span> <span class='label'>index:</span> <span class='id identifier rubyid_index'>index</span><span class='comma'>,</span> <span class='label'>lines:</span> <span class='id identifier rubyid_lines'>lines</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span><span class='rbrace'>}</span>
 <span class='kw'>end</span></pre>
@@ -938,13 +964,13 @@ methods to reconstruct the final merged RBS file.</p>
       <pre class="lines">
 
 
-121
-122
-123
-124</pre>
+134
+135
+136
+137</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 121</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 134</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_add_raw'>add_raw</span><span class='lparen'>(</span><span class='id identifier rubyid_lines'>lines</span><span class='comma'>,</span> <span class='label'>decision:</span><span class='rparen'>)</span>
   <span class='ivar'>@lines</span><span class='period'>.</span><span class='id identifier rubyid_concat'>concat</span><span class='lparen'>(</span><span class='id identifier rubyid_lines'>lines</span><span class='rparen'>)</span>
@@ -1029,23 +1055,23 @@ methods to reconstruct the final merged RBS file.</p>
       <pre class="lines">
 
 
-102
-103
-104
-105
-106
-107
-108
-109
-110
-111
-112
-113
-114
-115</pre>
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 102</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 115</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_add_recursive_merge'>add_recursive_merge</span><span class='lparen'>(</span><span class='id identifier rubyid_merged_content'>merged_content</span><span class='comma'>,</span> <span class='label'>template_index:</span><span class='comma'>,</span> <span class='label'>dest_index:</span><span class='rparen'>)</span>
   <span class='comment'># Split without trailing newlines for consistency with other methods
@@ -1104,12 +1130,12 @@ methods to reconstruct the final merged RBS file.</p>
       <pre class="lines">
 
 
-140
-141
-142</pre>
+153
+154
+155</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 140</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 153</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_empty?'>empty?</span>
   <span class='ivar'>@lines</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
@@ -1161,17 +1187,17 @@ methods to reconstruct the final merged RBS file.</p>
       <pre class="lines">
 
 
-146
-147
-148
-149
-150
-151
-152
-153</pre>
+159
+160
+161
+162
+163
+164
+165
+166</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 146</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 159</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_summary'>summary</span>
   <span class='id identifier rubyid_counts'>counts</span> <span class='op'>=</span> <span class='ivar'>@decisions</span><span class='period'>.</span><span class='id identifier rubyid_group_by'>group_by</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_d'>d</span><span class='op'>|</span> <span class='id identifier rubyid_d'>d</span><span class='lbracket'>[</span><span class='symbol'>:decision</span><span class='rbracket'>]</span> <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_transform_values'>transform_values</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:count</span><span class='rparen'>)</span>
@@ -1228,18 +1254,18 @@ methods to reconstruct the final merged RBS file.</p>
       <pre class="lines">
 
 
-128
-129
-130
-131
-132
-133
-134
-135
-136</pre>
+141
+142
+143
+144
+145
+146
+147
+148
+149</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 128</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/merge_result.rb', line 141</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_to_s'>to_s</span>
   <span class='kw'>return</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>if</span> <span class='ivar'>@lines</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
@@ -1260,9 +1286,9 @@ methods to reconstruct the final merged RBS file.</p>
 </div>
 
       <div id="footer">
-  Generated on Thu Feb 19 09:35:10 2026 by
+  Generated on Sun Apr 12 11:49:40 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.38 (ruby-4.0.1).
+  0.9.39 (ruby-4.0.2).
 </div>
 
     </div>

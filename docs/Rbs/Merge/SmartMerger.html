@@ -6,7 +6,7 @@
 <title>
   Class: Rbs::Merge::SmartMerger
   
-    &mdash; Documentation by YARD 0.9.38
+    &mdash; Documentation by YARD 0.9.39
   
 </title>
 
@@ -191,7 +191,7 @@ can perform recursive merging of their members.</p>
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(template_content, dest_content, signature_generator: nil, preference: :destination, add_template_only_nodes: false, freeze_token: nil, match_refiner: nil, regions: nil, region_placeholder: nil, node_typing: nil, max_recursion_depth: Float::INFINITY, **options)  &#x21d2; SmartMerger </a>
+      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(template_content, dest_content, signature_generator: nil, preference: :destination, add_template_only_nodes: false, remove_template_missing_nodes: false, freeze_token: nil, match_refiner: nil, regions: nil, region_placeholder: nil, node_typing: nil, max_recursion_depth: Float::INFINITY, **options)  &#x21d2; SmartMerger </a>
     
 
     
@@ -223,7 +223,7 @@ can perform recursive merging of their members.</p>
     <div class="method_details first">
   <h3 class="signature first" id="initialize-instance_method">
   
-    #<strong>initialize</strong>(template_content, dest_content, signature_generator: nil, preference: :destination, add_template_only_nodes: false, freeze_token: nil, match_refiner: nil, regions: nil, region_placeholder: nil, node_typing: nil, max_recursion_depth: Float::INFINITY, **options)  &#x21d2; <tt><span class='object_link'><a href="" title="Rbs::Merge::SmartMerger (class)">SmartMerger</a></span></tt> 
+    #<strong>initialize</strong>(template_content, dest_content, signature_generator: nil, preference: :destination, add_template_only_nodes: false, remove_template_missing_nodes: false, freeze_token: nil, match_refiner: nil, regions: nil, region_placeholder: nil, node_typing: nil, max_recursion_depth: Float::INFINITY, **options)  &#x21d2; <tt><span class='object_link'><a href="" title="Rbs::Merge::SmartMerger (class)">SmartMerger</a></span></tt> 
   
 
   
@@ -334,6 +334,24 @@ exist in template:</p>
   <li><code>false</code> (default) - Skip template-only nodes</li>
   <li><code>true</code> - Add template-only nodes to result</li>
 </ul>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>remove_template_missing_nodes</span>
+      
+      
+        <span class='type'>(<tt>Boolean</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>false</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'><p>Controls whether to remove<br />
+destination-only declarations while promoting their leading comments</p>
 </div>
       
     </li>
@@ -481,10 +499,6 @@ Default: Float::INFINITY (no limit)</p>
       <pre class="lines">
 
 
-79
-80
-81
-82
 83
 84
 85
@@ -509,10 +523,17 @@ Default: Float::INFINITY (no limit)</p>
 104
 105
 106
-107</pre>
+107
+108
+109
+110
+111
+112
+113
+114</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/smart_merger.rb', line 79</span>
+      <pre class="code"><span class="info file"># File 'lib/rbs/merge/smart_merger.rb', line 83</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span>
   <span class='id identifier rubyid_template_content'>template_content</span><span class='comma'>,</span>
@@ -520,6 +541,7 @@ Default: Float::INFINITY (no limit)</p>
   <span class='label'>signature_generator:</span> <span class='kw'>nil</span><span class='comma'>,</span>
   <span class='label'>preference:</span> <span class='symbol'>:destination</span><span class='comma'>,</span>
   <span class='label'>add_template_only_nodes:</span> <span class='kw'>false</span><span class='comma'>,</span>
+  <span class='label'>remove_template_missing_nodes:</span> <span class='kw'>false</span><span class='comma'>,</span>
   <span class='label'>freeze_token:</span> <span class='kw'>nil</span><span class='comma'>,</span>
   <span class='label'>match_refiner:</span> <span class='kw'>nil</span><span class='comma'>,</span>
   <span class='label'>regions:</span> <span class='kw'>nil</span><span class='comma'>,</span>
@@ -529,12 +551,14 @@ Default: Float::INFINITY (no limit)</p>
   <span class='op'>**</span><span class='id identifier rubyid_options'>options</span>
 <span class='rparen'>)</span>
   <span class='ivar'>@max_recursion_depth</span> <span class='op'>=</span> <span class='id identifier rubyid_max_recursion_depth'>max_recursion_depth</span>
+  <span class='ivar'>@remove_template_missing_nodes</span> <span class='op'>=</span> <span class='id identifier rubyid_remove_template_missing_nodes'>remove_template_missing_nodes</span>
   <span class='kw'>super</span><span class='lparen'>(</span>
     <span class='id identifier rubyid_template_content'>template_content</span><span class='comma'>,</span>
     <span class='id identifier rubyid_dest_content'>dest_content</span><span class='comma'>,</span>
     <span class='label'>signature_generator:</span> <span class='id identifier rubyid_signature_generator'>signature_generator</span><span class='comma'>,</span>
     <span class='label'>preference:</span> <span class='id identifier rubyid_preference'>preference</span><span class='comma'>,</span>
     <span class='label'>add_template_only_nodes:</span> <span class='id identifier rubyid_add_template_only_nodes'>add_template_only_nodes</span><span class='comma'>,</span>
+    <span class='label'>remove_template_missing_nodes:</span> <span class='id identifier rubyid_remove_template_missing_nodes'>remove_template_missing_nodes</span><span class='comma'>,</span>
     <span class='label'>freeze_token:</span> <span class='id identifier rubyid_freeze_token'>freeze_token</span><span class='comma'>,</span>
     <span class='label'>match_refiner:</span> <span class='id identifier rubyid_match_refiner'>match_refiner</span><span class='comma'>,</span>
     <span class='label'>regions:</span> <span class='id identifier rubyid_regions'>regions</span><span class='comma'>,</span>
@@ -554,9 +578,9 @@ Default: Float::INFINITY (no limit)</p>
 </div>
 
       <div id="footer">
-  Generated on Thu Feb 19 09:35:10 2026 by
+  Generated on Sun Apr 12 11:49:40 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.38 (ruby-4.0.1).
+  0.9.39 (ruby-4.0.2).
 </div>
 
     </div>

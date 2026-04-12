@@ -6,7 +6,7 @@
 <title>
   Class: Rbs::Merge::FileAligner
   
-    &mdash; Documentation by YARD 0.9.38
+    &mdash; Documentation by YARD 0.9.39
   
 </title>
 
@@ -69,10 +69,12 @@
   <dl>
     <dt>Inherits:</dt>
     <dd>
-      <span class="inheritName">Object</span>
+      <span class="inheritName">Ast::Merge::FileAlignerBase</span>
       
         <ul class="fullTree">
           <li>Object</li>
+          
+            <li class="next">Ast::Merge::FileAlignerBase</li>
           
             <li class="next">Rbs::Merge::FileAligner</li>
           
@@ -211,30 +213,7 @@ Produces alignment information used by SmartMerger to combine files.</p>
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#align-instance_method" title="#align (instance method)">#<strong>align</strong>  &#x21d2; Array&lt;Hash&gt; </a>
-    
-
-    
-  </span>
-  
-  
-  
-  
-  
-  
-  
-
-  
-    <span class="summary_desc"><div class='inline'><p>Perform alignment between template and destination statements.</p>
-</div></span>
-  
-</li>
-
-      
-        <li class="public ">
-  <span class="summary_signature">
-    
-      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(template_analysis, dest_analysis)  &#x21d2; FileAligner </a>
+      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(template_analysis, dest_analysis, **options)  &#x21d2; FileAligner </a>
     
 
     
@@ -259,13 +238,14 @@ Produces alignment information used by SmartMerger to combine files.</p>
     </ul>
   
 
-<div id="constructor_details" class="method_details_list">
+
+  <div id="constructor_details" class="method_details_list">
   <h2>Constructor Details</h2>
   
     <div class="method_details first">
   <h3 class="signature first" id="initialize-instance_method">
   
-    #<strong>initialize</strong>(template_analysis, dest_analysis)  &#x21d2; <tt><span class='object_link'><a href="" title="Rbs::Merge::FileAligner (class)">FileAligner</a></span></tt> 
+    #<strong>initialize</strong>(template_analysis, dest_analysis, **options)  &#x21d2; <tt><span class='object_link'><a href="" title="Rbs::Merge::FileAligner (class)">FileAligner</a></span></tt> 
   
 
   
@@ -323,15 +303,13 @@ Produces alignment information used by SmartMerger to combine files.</p>
 
 32
 33
-34
-35</pre>
+34</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_aligner.rb', line 32</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='id identifier rubyid_template_analysis'>template_analysis</span><span class='comma'>,</span> <span class='id identifier rubyid_dest_analysis'>dest_analysis</span><span class='rparen'>)</span>
-  <span class='ivar'>@template_analysis</span> <span class='op'>=</span> <span class='id identifier rubyid_template_analysis'>template_analysis</span>
-  <span class='ivar'>@dest_analysis</span> <span class='op'>=</span> <span class='id identifier rubyid_dest_analysis'>dest_analysis</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='id identifier rubyid_template_analysis'>template_analysis</span><span class='comma'>,</span> <span class='id identifier rubyid_dest_analysis'>dest_analysis</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+  <span class='kw'>super</span><span class='lparen'>(</span><span class='id identifier rubyid_template_analysis'>template_analysis</span><span class='comma'>,</span> <span class='id identifier rubyid_dest_analysis'>dest_analysis</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -464,205 +442,12 @@ Produces alignment information used by SmartMerger to combine files.</p>
   </div>
 
 
-  <div id="instance_method_details" class="method_details_list">
-    <h2>Instance Method Details</h2>
-
-    
-      <div class="method_details first">
-  <h3 class="signature first" id="align-instance_method">
-  
-    #<strong>align</strong>  &#x21d2; <tt>Array&lt;Hash&gt;</tt> 
-  
-
-  
-
-  
-</h3><div class="docstring">
-  <div class="discussion">
-    <p>Perform alignment between template and destination statements</p>
-
-
-  </div>
-</div>
-<div class="tags">
-  
-<p class="tag_title">Returns:</p>
-<ul class="return">
-  
-    <li>
-      
-      
-        <span class='type'>(<tt>Array&lt;Hash&gt;</tt>)</span>
-      
-      
-      
-        &mdash;
-        <div class='inline'><p>Alignment entries with type, indices, and declarations</p>
-</div>
-      
-    </li>
-  
-</ul>
-
-</div><table class="source_code">
-  <tr>
-    <td>
-      <pre class="lines">
-
-
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52
-53
-54
-55
-56
-57
-58
-59
-60
-61
-62
-63
-64
-65
-66
-67
-68
-69
-70
-71
-72
-73
-74
-75
-76
-77
-78
-79
-80
-81
-82
-83
-84
-85
-86
-87
-88
-89
-90
-91
-92
-93
-94
-95
-96
-97
-98
-99
-100
-101
-102
-103
-104
-105
-106
-107</pre>
-    </td>
-    <td>
-      <pre class="code"><span class="info file"># File 'lib/rbs/merge/file_aligner.rb', line 40</span>
-
-<span class='kw'>def</span> <span class='id identifier rubyid_align'>align</span>
-  <span class='id identifier rubyid_template_statements'>template_statements</span> <span class='op'>=</span> <span class='ivar'>@template_analysis</span><span class='period'>.</span><span class='id identifier rubyid_statements'>statements</span>
-  <span class='id identifier rubyid_dest_statements'>dest_statements</span> <span class='op'>=</span> <span class='ivar'>@dest_analysis</span><span class='period'>.</span><span class='id identifier rubyid_statements'>statements</span>
-
-  <span class='comment'># Build signature maps
-</span>  <span class='id identifier rubyid_template_by_sig'>template_by_sig</span> <span class='op'>=</span> <span class='id identifier rubyid_build_signature_map'>build_signature_map</span><span class='lparen'>(</span><span class='id identifier rubyid_template_statements'>template_statements</span><span class='comma'>,</span> <span class='ivar'>@template_analysis</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_dest_by_sig'>dest_by_sig</span> <span class='op'>=</span> <span class='id identifier rubyid_build_signature_map'>build_signature_map</span><span class='lparen'>(</span><span class='id identifier rubyid_dest_statements'>dest_statements</span><span class='comma'>,</span> <span class='ivar'>@dest_analysis</span><span class='rparen'>)</span>
-
-  <span class='comment'># Track which indices have been matched
-</span>  <span class='id identifier rubyid_matched_template'>matched_template</span> <span class='op'>=</span> <span class='const'>Set</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
-  <span class='id identifier rubyid_matched_dest'>matched_dest</span> <span class='op'>=</span> <span class='const'>Set</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
-  <span class='id identifier rubyid_alignment'>alignment</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
-
-  <span class='comment'># First pass: find matches by signature
-</span>  <span class='id identifier rubyid_template_by_sig'>template_by_sig</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_sig'>sig</span><span class='comma'>,</span> <span class='id identifier rubyid_template_indices'>template_indices</span><span class='op'>|</span>
-    <span class='kw'>next</span> <span class='kw'>unless</span> <span class='id identifier rubyid_dest_by_sig'>dest_by_sig</span><span class='period'>.</span><span class='id identifier rubyid_key?'>key?</span><span class='lparen'>(</span><span class='id identifier rubyid_sig'>sig</span><span class='rparen'>)</span>
-
-    <span class='id identifier rubyid_dest_indices'>dest_indices</span> <span class='op'>=</span> <span class='id identifier rubyid_dest_by_sig'>dest_by_sig</span><span class='lbracket'>[</span><span class='id identifier rubyid_sig'>sig</span><span class='rbracket'>]</span>
-
-    <span class='comment'># Match indices pairwise (first template with first dest, etc.)
-</span>    <span class='id identifier rubyid_template_indices'>template_indices</span><span class='period'>.</span><span class='id identifier rubyid_zip'>zip</span><span class='lparen'>(</span><span class='id identifier rubyid_dest_indices'>dest_indices</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_t_idx'>t_idx</span><span class='comma'>,</span> <span class='id identifier rubyid_d_idx'>d_idx</span><span class='op'>|</span>
-      <span class='kw'>next</span> <span class='kw'>unless</span> <span class='id identifier rubyid_t_idx'>t_idx</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_d_idx'>d_idx</span>
-
-      <span class='id identifier rubyid_alignment'>alignment</span> <span class='op'>&lt;&lt;</span> <span class='lbrace'>{</span>
-        <span class='label'>type:</span> <span class='symbol'>:match</span><span class='comma'>,</span>
-        <span class='label'>template_index:</span> <span class='id identifier rubyid_t_idx'>t_idx</span><span class='comma'>,</span>
-        <span class='label'>dest_index:</span> <span class='id identifier rubyid_d_idx'>d_idx</span><span class='comma'>,</span>
-        <span class='label'>signature:</span> <span class='id identifier rubyid_sig'>sig</span><span class='comma'>,</span>
-        <span class='label'>template_decl:</span> <span class='id identifier rubyid_template_statements'>template_statements</span><span class='lbracket'>[</span><span class='id identifier rubyid_t_idx'>t_idx</span><span class='rbracket'>]</span><span class='comma'>,</span>
-        <span class='label'>dest_decl:</span> <span class='id identifier rubyid_dest_statements'>dest_statements</span><span class='lbracket'>[</span><span class='id identifier rubyid_d_idx'>d_idx</span><span class='rbracket'>]</span><span class='comma'>,</span>
-      <span class='rbrace'>}</span>
-
-      <span class='id identifier rubyid_matched_template'>matched_template</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_t_idx'>t_idx</span>
-      <span class='id identifier rubyid_matched_dest'>matched_dest</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_d_idx'>d_idx</span>
-    <span class='kw'>end</span>
-  <span class='kw'>end</span>
-
-  <span class='comment'># Second pass: add template-only entries
-</span>  <span class='id identifier rubyid_template_statements'>template_statements</span><span class='period'>.</span><span class='id identifier rubyid_each_with_index'>each_with_index</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_stmt'>stmt</span><span class='comma'>,</span> <span class='id identifier rubyid_idx'>idx</span><span class='op'>|</span>
-    <span class='kw'>next</span> <span class='kw'>if</span> <span class='id identifier rubyid_matched_template'>matched_template</span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='id identifier rubyid_idx'>idx</span><span class='rparen'>)</span>
-
-    <span class='id identifier rubyid_alignment'>alignment</span> <span class='op'>&lt;&lt;</span> <span class='lbrace'>{</span>
-      <span class='label'>type:</span> <span class='symbol'>:template_only</span><span class='comma'>,</span>
-      <span class='label'>template_index:</span> <span class='id identifier rubyid_idx'>idx</span><span class='comma'>,</span>
-      <span class='label'>dest_index:</span> <span class='kw'>nil</span><span class='comma'>,</span>
-      <span class='label'>signature:</span> <span class='ivar'>@template_analysis</span><span class='period'>.</span><span class='id identifier rubyid_signature_at'>signature_at</span><span class='lparen'>(</span><span class='id identifier rubyid_idx'>idx</span><span class='rparen'>)</span><span class='comma'>,</span>
-      <span class='label'>template_decl:</span> <span class='id identifier rubyid_stmt'>stmt</span><span class='comma'>,</span>
-      <span class='label'>dest_decl:</span> <span class='kw'>nil</span><span class='comma'>,</span>
-    <span class='rbrace'>}</span>
-  <span class='kw'>end</span>
-
-  <span class='comment'># Third pass: add dest-only entries
-</span>  <span class='id identifier rubyid_dest_statements'>dest_statements</span><span class='period'>.</span><span class='id identifier rubyid_each_with_index'>each_with_index</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_stmt'>stmt</span><span class='comma'>,</span> <span class='id identifier rubyid_idx'>idx</span><span class='op'>|</span>
-    <span class='kw'>next</span> <span class='kw'>if</span> <span class='id identifier rubyid_matched_dest'>matched_dest</span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='id identifier rubyid_idx'>idx</span><span class='rparen'>)</span>
-
-    <span class='id identifier rubyid_alignment'>alignment</span> <span class='op'>&lt;&lt;</span> <span class='lbrace'>{</span>
-      <span class='label'>type:</span> <span class='symbol'>:dest_only</span><span class='comma'>,</span>
-      <span class='label'>template_index:</span> <span class='kw'>nil</span><span class='comma'>,</span>
-      <span class='label'>dest_index:</span> <span class='id identifier rubyid_idx'>idx</span><span class='comma'>,</span>
-      <span class='label'>signature:</span> <span class='ivar'>@dest_analysis</span><span class='period'>.</span><span class='id identifier rubyid_signature_at'>signature_at</span><span class='lparen'>(</span><span class='id identifier rubyid_idx'>idx</span><span class='rparen'>)</span><span class='comma'>,</span>
-      <span class='label'>template_decl:</span> <span class='kw'>nil</span><span class='comma'>,</span>
-      <span class='label'>dest_decl:</span> <span class='id identifier rubyid_stmt'>stmt</span><span class='comma'>,</span>
-    <span class='rbrace'>}</span>
-  <span class='kw'>end</span>
-
-  <span class='comment'># Sort by appearance order (prefer destination order, then template)
-</span>  <span class='id identifier rubyid_sort_alignment'>sort_alignment</span><span class='lparen'>(</span><span class='id identifier rubyid_alignment'>alignment</span><span class='rparen'>)</span>
-<span class='kw'>end</span></pre>
-    </td>
-  </tr>
-</table>
-</div>
-    
-  </div>
-
 </div>
 
       <div id="footer">
-  Generated on Thu Feb 19 09:35:09 2026 by
+  Generated on Sun Apr 12 11:49:40 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.38 (ruby-4.0.1).
+  0.9.39 (ruby-4.0.2).
 </div>
 
     </div>
