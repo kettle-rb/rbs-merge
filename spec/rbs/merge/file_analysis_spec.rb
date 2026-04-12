@@ -1058,6 +1058,15 @@ RSpec.describe Rbs::Merge::FileAnalysis do
         expect(augmenter.preamble_region.nodes.map(&:line_number)).to eq([1])
         expect(augmenter.postlude_region.nodes.map(&:line_number)).to eq([6])
       end
+
+      it "reports a source-augmented synthetic support style" do
+        expect(analysis.comment_support_style).to be_a(Ast::Merge::Comment::SupportStyle)
+        expect(analysis.comment_support_style.source_augmented_synthetic?).to be true
+        expect(analysis.comment_support_style.synthetic_write?).to be true
+        expect(analysis.comment_support_style.details[:capability]).to eq(:source_augmented)
+        expect(analysis.comment_support_style.details[:source]).to eq(:rbs_source)
+        expect(analysis.comment_support_style.details[:style]).to eq(:hash_comment)
+      end
     end
   end
 

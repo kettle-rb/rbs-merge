@@ -771,6 +771,89 @@ RSpec.describe Rbs::Merge::SmartMerger do
     end
   end
 
+  shared_examples "source-augmented comment ownership preservation" do
+    context "when a floating comment block is attached to different declarations in template vs destination" do
+      let(:template_with_floating_docs) do
+        <<~RBS
+          class Foo
+          end
+
+          # shared docs for the custom type
+          type custom = String
+        RBS
+      end
+
+      let(:destination_with_shifted_docs) do
+        <<~RBS
+          class Foo
+          end
+
+          # shared docs for the custom type
+          class Extra
+          end
+
+          type custom = String
+        RBS
+      end
+
+      it "keeps the floating comment block singular while preserving all declarations" do
+        merged = begin
+          described_class.new(
+            template_with_floating_docs,
+            destination_with_shifted_docs,
+            preference: :destination,
+            add_template_only_nodes: true,
+          ).merge
+        rescue Rbs::Merge::TemplateParseError => e
+          pending(e.message) if e.message.include?("No RBS parser available")
+          raise
+        end
+
+        expect(merged.scan(/^# shared docs for the custom type$/).size).to eq(1), merged
+        expect(merged.scan(/^class Foo$/).size).to eq(1), merged
+        expect(merged.scan(/^class Extra$/).size).to eq(1), merged
+        expect(merged.scan(/^type custom = String$/).size).to eq(1), merged
+      end
+    end
+
+    context "when both inputs have the same preamble ahead of a matched declaration" do
+      let(:commented_template) do
+        <<~RBS
+          # shared preamble docs
+
+          class Foo
+          end
+        RBS
+      end
+
+      let(:commented_destination) do
+        <<~RBS
+          # shared preamble docs
+
+          class Foo
+          end
+        RBS
+      end
+
+      it "keeps the document preamble singular" do
+        merged = begin
+          described_class.new(
+            commented_template,
+            commented_destination,
+            preference: :destination,
+            add_template_only_nodes: true,
+          ).merge
+        rescue Rbs::Merge::TemplateParseError => e
+          pending(e.message) if e.message.include?("No RBS parser available")
+          raise
+        end
+
+        expect(merged.scan(/^# shared preamble docs$/).size).to eq(1), merged
+        expect(merged.scan(/^class Foo$/).size).to eq(1), merged
+      end
+    end
+  end
+
   shared_examples "recursive member merge parity" do
     context "when template preference merges matched container members" do
       let(:template_members) do
@@ -1030,6 +1113,7 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "template-preferred declaration-leading comment fallback"
       it_behaves_like "removed destination declaration comment preservation"
       it_behaves_like "document boundary comment preservation"
+      it_behaves_like "source-augmented comment ownership preservation"
       it_behaves_like "recursive member merge parity"
       it_behaves_like "recursive member comment preservation"
       it_behaves_like "recursive empty preferred container parity"
@@ -1068,6 +1152,7 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "template-preferred declaration-leading comment fallback"
       it_behaves_like "removed destination declaration comment preservation"
       it_behaves_like "document boundary comment preservation"
+      it_behaves_like "source-augmented comment ownership preservation"
       it_behaves_like "recursive member merge parity"
       it_behaves_like "recursive member comment preservation"
       it_behaves_like "recursive empty preferred container parity"
@@ -1106,6 +1191,7 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "template-preferred declaration-leading comment fallback"
       it_behaves_like "removed destination declaration comment preservation"
       it_behaves_like "document boundary comment preservation"
+      it_behaves_like "source-augmented comment ownership preservation"
       it_behaves_like "recursive member merge parity"
       it_behaves_like "recursive member comment preservation"
       it_behaves_like "recursive empty preferred container parity"
@@ -1144,6 +1230,7 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "template-preferred declaration-leading comment fallback"
       it_behaves_like "removed destination declaration comment preservation"
       it_behaves_like "document boundary comment preservation"
+      it_behaves_like "source-augmented comment ownership preservation"
       it_behaves_like "recursive member merge parity"
       it_behaves_like "recursive member comment preservation"
       it_behaves_like "recursive empty preferred container parity"
@@ -1182,6 +1269,7 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "template-preferred declaration-leading comment fallback"
       it_behaves_like "removed destination declaration comment preservation"
       it_behaves_like "document boundary comment preservation"
+      it_behaves_like "source-augmented comment ownership preservation"
       it_behaves_like "recursive member merge parity"
       it_behaves_like "recursive member comment preservation"
       it_behaves_like "recursive empty preferred container parity"
@@ -1220,6 +1308,7 @@ RSpec.describe Rbs::Merge::SmartMerger do
       it_behaves_like "template-preferred declaration-leading comment fallback"
       it_behaves_like "removed destination declaration comment preservation"
       it_behaves_like "document boundary comment preservation"
+      it_behaves_like "source-augmented comment ownership preservation"
       it_behaves_like "recursive member merge parity"
       it_behaves_like "recursive member comment preservation"
       it_behaves_like "recursive empty preferred container parity"

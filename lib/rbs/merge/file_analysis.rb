@@ -99,6 +99,20 @@ module Rbs
         @comment_capability ||= comment_tracker.augment(owners: []).capability
       end
 
+      # Describe how RBS merges currently own and emit comments.
+      #
+      # RBS comment tracking is source-augmented and emitted through the shared
+      # synthetic merge layer rather than via editable parser-native comment AST.
+      #
+      # @return [Ast::Merge::Comment::SupportStyle]
+      def comment_support_style
+        @comment_support_style ||= Ast::Merge::Comment::SupportStyle.source_augmented_synthetic(
+          source: :rbs_source,
+          capability: comment_capability.level,
+          style: :hash_comment,
+        )
+      end
+
       # Get all tracked comments converted to shared comment nodes.
       #
       # @return [Array]
