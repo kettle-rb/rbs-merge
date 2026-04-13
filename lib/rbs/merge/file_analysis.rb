@@ -148,7 +148,11 @@ module Rbs
       # @param options [Hash] Additional metadata / lookup overrides
       # @return [Object]
       def comment_attachment_for(owner, **options)
-        comment_tracker.comment_attachment_for(owner, **options)
+        merge_comment_attachment_with_layout(
+          owner,
+          comment_tracker.comment_attachment_for(owner, **options),
+          **options,
+        )
       end
 
       # Build a passive shared comment augmenter for this analysis.

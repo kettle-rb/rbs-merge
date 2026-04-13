@@ -816,6 +816,94 @@ RSpec.describe Rbs::Merge::SmartMerger do
       end
     end
 
+    context "when template preference removes the separating gap ahead of a matched declaration" do
+      let(:template_with_attached_docs) do
+        <<~RBS
+          class Keep
+          end
+          # floating note
+          class App
+          end
+        RBS
+      end
+
+      let(:destination_with_floating_docs) do
+        <<~RBS
+          class Keep
+          end
+
+          # floating note
+          class App
+          end
+        RBS
+      end
+
+      it "attaches the formerly floating docs to the matched declaration" do
+        merged = begin
+          described_class.new(
+            template_with_attached_docs,
+            destination_with_floating_docs,
+            preference: :template,
+          ).merge
+        rescue Rbs::Merge::TemplateParseError => e
+          pending(e.message) if e.message.include?("No RBS parser available")
+          raise
+        end
+
+        expect(merged).to eq(template_with_attached_docs)
+      end
+    end
+
+    context "when a commented destination-only declaration is removed but its separating gap should remain" do
+      let(:template_without_removed_declaration) do
+        <<~RBS
+          class Keep
+          end
+
+          class App
+          end
+        RBS
+      end
+
+      let(:destination_with_floating_removed_docs) do
+        <<~RBS
+          class Keep
+          end
+
+          # floating note
+          class RemoveMe
+          end
+
+          class App
+          end
+        RBS
+      end
+
+      it "preserves the floating docs and their separating blank line" do
+        merged = begin
+          described_class.new(
+            template_without_removed_declaration,
+            destination_with_floating_removed_docs,
+            preference: :template,
+            remove_template_missing_nodes: true,
+          ).merge
+        rescue Rbs::Merge::TemplateParseError => e
+          pending(e.message) if e.message.include?("No RBS parser available")
+          raise
+        end
+
+        expect(merged).to eq(<<~RBS)
+          class Keep
+          end
+
+          # floating note
+
+          class App
+          end
+        RBS
+      end
+    end
+
     context "when both inputs have the same preamble ahead of a matched declaration" do
       let(:commented_template) do
         <<~RBS

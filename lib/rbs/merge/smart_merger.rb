@@ -372,7 +372,12 @@ module Rbs
           region_start = region_start_line(leading_region)
           if region_start && start_line && region_start < start_line
             leading_start = preceding_blank_line_start(region_start, analysis)
-            return (leading_start...start_line).filter_map { |ln| analysis.line_at(ln) }
+            lines = (leading_start...start_line).filter_map { |ln| analysis.line_at(ln) }
+            trailing_gap = analysis.comment_attachment_for(decl)&.trailing_gap
+            if trailing_gap&.effective_controller_side(removed_owners: [decl]) == :after
+              lines.concat(trailing_gap.lines)
+            end
+            return lines
           end
         elsif decl.respond_to?(:comment) && decl.comment
           comment_start = decl.comment.location&.start_line
@@ -436,7 +441,12 @@ module Rbs
           leading_end = get_start_line(leading_decl)
 
           if region_start && leading_end && region_start < leading_end
-            leading_start = preceding_blank_line_start(region_start, leading_analysis)
+            leading_start = leading_segment_start_for_output(
+              output_decl: decl,
+              output_analysis: analysis,
+              source_region_start: region_start,
+              source_analysis: leading_analysis,
+            )
             leading_lines = (leading_start...leading_end).filter_map { |ln| leading_analysis.line_at(ln) }
             body_lines = recursive_body_lines_for_declaration(
               template_decl,
@@ -695,7 +705,12 @@ module Rbs
           leading_end = get_start_line(leading_statement)
 
           if region_start && leading_end && region_start < leading_end
-            leading_start = preceding_blank_line_start(region_start, leading_analysis)
+            leading_start = leading_segment_start_for_output(
+              output_decl: statement,
+              output_analysis: analysis,
+              source_region_start: region_start,
+              source_analysis: leading_analysis,
+            )
             (leading_start...leading_end).filter_map { |line_number| leading_analysis.line_at(line_number) }
           else
             []
@@ -788,6 +803,42 @@ module Rbs
         end
 
         line_num
+      end
+
+      def leading_segment_start_for_output(output_decl:, output_analysis:, source_region_start:, source_analysis:)
+        source_region_start - desired_blank_line_count_before_leading_region(
+          output_decl: output_decl,
+          output_analysis: output_analysis,
+          source_region_start: source_region_start,
+          source_analysis: source_analysis,
+        )
+      end
+
+      def desired_blank_line_count_before_leading_region(output_decl:, output_analysis:, source_region_start:, source_analysis:)
+        target_region = leading_region_for(output_decl, output_analysis)
+        target_region_start = region_start_line(target_region)
+        output_start_line = get_start_line(output_decl)
+
+        if target_region_start && output_start_line && target_region_start < output_start_line
+          blank_line_count_before(target_region_start, output_analysis)
+        else
+          blank_line_count_before(source_region_start, source_analysis)
+        end
+      end
+
+      def blank_line_count_before(line_num, analysis)
+        count = 0
+        current = line_num - 1
+
+        while current >= 1
+          previous_line = analysis.line_at(current)
+          break unless previous_line && previous_line.strip.empty?
+
+          count += 1
+          current -= 1
+        end
+
+        count
       end
 
       # Get start line for a declaration (works with both backends)

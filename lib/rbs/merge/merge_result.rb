@@ -189,7 +189,12 @@ module Rbs
           source_start = get_start_line(leading_statement)
 
           if region_start && source_start && region_start < source_start
-            leading_start = preceding_blank_line_start(region_start, leading_analysis)
+            leading_start = leading_segment_start_for_output(
+              output_statement: statement,
+              output_analysis: analysis,
+              source_region_start: region_start,
+              source_analysis: leading_analysis,
+            )
             leading_lines = (leading_start...source_start).filter_map { |ln| leading_analysis.line_at(ln) }
             body_lines = (start_line..end_line).map { |ln| analysis.line_at(ln) }
             return leading_lines + body_lines
@@ -246,6 +251,42 @@ module Rbs
         end
 
         line_num
+      end
+
+      def leading_segment_start_for_output(output_statement:, output_analysis:, source_region_start:, source_analysis:)
+        source_region_start - desired_blank_line_count_before_leading_region(
+          output_statement: output_statement,
+          output_analysis: output_analysis,
+          source_region_start: source_region_start,
+          source_analysis: source_analysis,
+        )
+      end
+
+      def desired_blank_line_count_before_leading_region(output_statement:, output_analysis:, source_region_start:, source_analysis:)
+        target_region = leading_region_for(output_statement, output_analysis)
+        target_region_start = region_start_line(target_region)
+        output_start_line = get_start_line(output_statement)
+
+        if target_region_start && output_start_line && target_region_start < output_start_line
+          blank_line_count_before(target_region_start, output_analysis)
+        else
+          blank_line_count_before(source_region_start, source_analysis)
+        end
+      end
+
+      def blank_line_count_before(line_num, analysis)
+        count = 0
+        current = line_num - 1
+
+        while current >= 1
+          previous_line = analysis.line_at(current)
+          break unless previous_line && previous_line.strip.empty?
+
+          count += 1
+          current -= 1
+        end
+
+        count
       end
 
       # Get start line for a statement (works with both backends)

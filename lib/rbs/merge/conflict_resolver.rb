@@ -88,7 +88,8 @@ module Rbs
         text2 = extract_declaration_text(decl2, @dest_analysis)
 
         # Normalize whitespace for comparison
-        normalize_text(text1) == normalize_text(text2)
+        normalize_text(text1) == normalize_text(text2) &&
+          leading_gap_line_count_for(decl1, @template_analysis) == leading_gap_line_count_for(decl2, @dest_analysis)
       end
 
       # Check if declarations can be recursively merged
@@ -196,6 +197,32 @@ module Rbs
         return unless region.respond_to?(:nodes)
 
         region.nodes.filter_map { |node| node.respond_to?(:line_number) ? node.line_number : nil }.min
+      end
+
+      def leading_gap_line_count_for(decl, analysis)
+        leading_region = leading_region_for(decl, analysis)
+        return 0 unless region_present?(leading_region)
+
+        region_start = region_start_line(leading_region)
+        start_line = get_decl_start_line(decl)
+        return 0 unless region_start && start_line && region_start < start_line
+
+        blank_line_count_before(region_start, analysis)
+      end
+
+      def blank_line_count_before(line_num, analysis)
+        count = 0
+        current = line_num - 1
+
+        while current >= 1
+          previous_line = analysis.line_at(current)
+          break unless previous_line && previous_line.strip.empty?
+
+          count += 1
+          current -= 1
+        end
+
+        count
       end
 
       # Get start line for a declaration (works with both backends)
