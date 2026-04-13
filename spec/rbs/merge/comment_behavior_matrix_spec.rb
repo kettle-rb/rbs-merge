@@ -5,7 +5,7 @@ require "ast/merge/rspec/shared_examples"
 RSpec.describe "rbs comment behavior matrix" do
   extend Ast::Merge::RSpec::CommentBehaviorMatrixAdapters
 
-  include_examples "Ast::Merge::CommentBehaviorMatrix" do
+  it_behaves_like "Ast::Merge::CommentBehaviorMatrix" do
     hash_comment_line_based_comment_matrix_adapter(
       analysis_class: Rbs::Merge::FileAnalysis,
       merger_class: Rbs::Merge::SmartMerger,
