@@ -200,7 +200,15 @@ module Rbs
       # @param alignment [Array<Hash>] Alignment entries
       # @return [void]
       def process_alignment(alignment)
+        prefix_template_only_entries = prefix_template_only_entries_for(alignment)
+
+        prefix_template_only_entries.each do |entry|
+          process_template_only(entry)
+        end
+
         alignment.each do |entry|
+          next if prefix_template_only_entries.include?(entry)
+
           case entry[:type]
           when :match
             process_match(entry)
@@ -209,6 +217,21 @@ module Rbs
           when :dest_only
             process_dest_only(entry)
           end
+        end
+      end
+
+      def prefix_template_only_entries_for(alignment)
+        first_match_template_index = alignment
+          .select { |entry| entry[:type] == :match }
+          .filter_map { |entry| entry[:template_index] }
+          .min
+
+        return [] unless first_match_template_index
+
+        alignment.select do |entry|
+          entry[:type] == :template_only &&
+            entry[:template_index] &&
+            entry[:template_index] < first_match_template_index
         end
       end
 

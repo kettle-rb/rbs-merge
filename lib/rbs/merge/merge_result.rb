@@ -197,14 +197,14 @@ module Rbs
             )
             leading_lines = (leading_start...source_start).filter_map { |ln| leading_analysis.line_at(ln) }
             body_lines = (start_line..end_line).map { |ln| analysis.line_at(ln) }
-            return leading_lines + body_lines
+            return leading_lines + body_lines + trailing_lines_for(statement, analysis)
           end
         elsif statement.respond_to?(:comment) && statement.comment
           comment_start = statement.comment.location&.start_line
           start_line = comment_start if comment_start && comment_start < start_line
         end
 
-        (start_line..end_line).map { |ln| analysis.line_at(ln) }
+        (start_line..end_line).map { |ln| analysis.line_at(ln) } + trailing_lines_for(statement, analysis)
       end
 
       def preferred_leading_region(statement, analysis, comment_source_statement: nil, comment_source_analysis: nil)
@@ -224,6 +224,24 @@ module Rbs
 
         attachment = analysis.comment_attachment_for(statement)
         attachment.leading_region if attachment.respond_to?(:leading_region)
+      end
+
+      def trailing_lines_for(statement, analysis)
+        return [] unless statement && analysis&.respond_to?(:comment_attachment_for)
+
+        attachment = analysis.comment_attachment_for(statement)
+        trailing_region = attachment.trailing_region if attachment.respond_to?(:trailing_region)
+        return [] unless region_present?(trailing_region)
+
+        trailing_region.nodes.filter_map do |node|
+          if node.respond_to?(:slice)
+            node.slice.to_s
+          elsif node.respond_to?(:text)
+            node.text.to_s
+          else
+            node.to_s
+          end
+        end
       end
 
       def region_present?(region)
