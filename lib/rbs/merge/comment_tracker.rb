@@ -24,14 +24,18 @@ module Rbs
       # content on the same line.
       def comment_attachment_for(owner, line_num: nil, **metadata)
         resolved_line_num = line_num || owner_line_num(owner)
+        resolved_end_line = owner_end_line(owner) || resolved_line_num
         leading_region = resolved_line_num ? leading_comment_region_before(resolved_line_num) : nil
+        trailing_region = resolved_end_line ? trailing_comment_region_after(resolved_end_line) : nil
 
         Ast::Merge::Comment::Attachment.new(
           owner: owner,
           leading_region: leading_region,
           inline_region: nil,
+          trailing_region: trailing_region,
           metadata: metadata.merge(
             line_num: resolved_line_num,
+            end_line: resolved_end_line,
             source: :comment_tracker,
           ),
         )
