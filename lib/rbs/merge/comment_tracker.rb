@@ -8,8 +8,11 @@ module Rbs
     # +Ast::Merge::Comment::HashTrackerBase+. Only format-specific comment
     # extraction and owner resolution are overridden here.
     #
-    # RBS has only full-line comments (no inline comment syntax), and freeze
-    # marker lines are excluded from the tracked set.
+    # RBS has only full-line comments for the declarations this adapter models;
+    # inline hash-comment scenarios from the shared comment matrix do not exist
+    # in the language surface here. Treat those skipped matrix cases as syntax
+    # limits, not pending merge-engine work. Freeze marker lines are excluded
+    # from the tracked set.
     class CommentTracker < Ast::Merge::Comment::HashTrackerBase
       DEFAULT_FREEZE_TOKEN = "rbs-merge"
 
@@ -19,9 +22,9 @@ module Rbs
         super(Array(lines))
       end
 
-      # RBS format has no inline comments — override to always return nil.
-      # This keeps comment_attachment_for from erroneously detecting inline
-      # content on the same line.
+      # RBS format has no inline comment attachment here — override to always
+      # return nil. This is intentional syntax modeling, not missing feature
+      # work for the shared comment matrix.
       def comment_attachment_for(owner, line_num: nil, **metadata)
         resolved_line_num = line_num || owner_line_num(owner)
         resolved_end_line = owner_end_line(owner) || resolved_line_num

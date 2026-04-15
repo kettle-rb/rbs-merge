@@ -769,6 +769,157 @@ RSpec.describe Rbs::Merge::SmartMerger do
         expect(merger.merge).to eq(comment_only_destination)
       end
     end
+
+    it "keeps a shared interstitial comment block singular between adjacent matched declarations" do
+      template = <<~RBS
+        type alpha = 1
+        # Shared docs
+        type beta = 2
+      RBS
+      destination = <<~RBS
+        type alpha = 9
+        # Shared docs
+        type beta = 8
+      RBS
+
+      merged = described_class.new(template, destination).merge
+
+      expect(merged.lines.grep("# Shared docs\n").size).to eq(1)
+      expect(merged).to include("type alpha = 9\n# Shared docs\ntype beta = 8")
+    end
+
+    it "keeps destination-owned first-owner docs singular when template models them as a preamble" do
+      template = <<~RBS
+        # Shared header
+
+        type alpha = 1
+      RBS
+      destination = <<~RBS
+        # Shared header
+        type alpha = 9
+      RBS
+
+      merged = described_class.new(template, destination, preference: :template).merge
+
+      expect(merged.lines.grep("# Shared header\n").size).to eq(1)
+      expect(merged).to include("type alpha = 1")
+    end
+
+    it "does not duplicate a first-owner doc block when only blank-line ownership differs across sources" do
+      template = <<~RBS
+        # Shared header
+
+        type alpha = 1
+      RBS
+      destination = <<~RBS
+        # Shared header
+        type alpha = 9
+      RBS
+
+      merged = described_class.new(template, destination, preference: :destination).merge
+
+      expect(merged.lines.grep("# Shared header\n").size).to eq(1)
+      expect(merged).to eq(<<~RBS)
+        # Shared header
+        type alpha = 9
+      RBS
+    end
+
+    it "collapses duplicated template-owned preamble prefixes in heal mode" do
+      template = <<~RBS
+        # Shared header
+
+        type alpha = 1
+      RBS
+      destination = <<~RBS
+        # Shared header
+        # Shared header
+        # Destination header
+        type alpha = 9
+      RBS
+
+      merged = described_class.new(template, destination, add_template_only_nodes: true).merge
+
+      expect(merged.lines.grep("# Shared header\n").size).to eq(0)
+      expect(merged.lines.grep("# Destination header\n").size).to eq(1)
+      expect(merged).to include("type alpha = 9")
+    end
+
+    it "preserves duplicated template-owned preamble prefixes in skip mode" do
+      template = <<~RBS
+        # Shared header
+
+        type alpha = 1
+      RBS
+      destination = <<~RBS
+        # Shared header
+        # Shared header
+        # Destination header
+        type alpha = 9
+      RBS
+
+      merged = described_class.new(
+        template,
+        destination,
+        add_template_only_nodes: true,
+        corruption_handling: :skip,
+      ).merge
+
+      expect(merged.lines.grep("# Shared header\n").size).to eq(2)
+      expect(merged.lines.grep("# Destination header\n").size).to eq(1)
+    end
+
+    it "warns and preserves duplicated template-owned preamble prefixes in warn mode" do
+      allow(Rbs::Merge::DebugLogger).to receive(:debug_warning)
+
+      template = <<~RBS
+        # Shared header
+
+        type alpha = 1
+      RBS
+      destination = <<~RBS
+        # Shared header
+        # Shared header
+        # Destination header
+        type alpha = 9
+      RBS
+
+      merged = described_class.new(
+        template,
+        destination,
+        add_template_only_nodes: true,
+        corruption_handling: :warn,
+      ).merge
+
+      expect(Rbs::Merge::DebugLogger).to have_received(:debug_warning).with(
+        /Suspected corruption \(duplicate_template_preamble_prefix\)/,
+        hash_including(template_comment_lines: 2, merged_comment_lines: 3, destination_specific_comment_lines: 1),
+      )
+      expect(merged.lines.grep("# Shared header\n").size).to eq(2)
+    end
+
+    it "raises on duplicated template-owned preamble prefixes in error mode" do
+      template = <<~RBS
+        # Shared header
+
+        type alpha = 1
+      RBS
+      destination = <<~RBS
+        # Shared header
+        # Shared header
+        # Destination header
+        type alpha = 9
+      RBS
+
+      expect {
+        described_class.new(
+          template,
+          destination,
+          add_template_only_nodes: true,
+          corruption_handling: :error,
+        ).merge
+      }.to raise_error(Rbs::Merge::CorruptionDetectedError, /duplicate_template_preamble_prefix/)
+    end
   end
 
   shared_examples "source-augmented comment ownership preservation" do

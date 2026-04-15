@@ -148,9 +148,11 @@ module Rbs
       # @param options [Hash] Additional metadata / lookup overrides
       # @return [Object]
       def comment_attachment_for(owner, **options)
+        augmented_attachment = comment_augmenter(**options).attachment_for(owner)
+
         shared_comment_attachment_for(
           owner,
-          tracker_attachment: comment_tracker.comment_attachment_for(owner, **options),
+          tracker_attachment: augmented_attachment || comment_tracker.comment_attachment_for(owner, **options),
           **options,
         )
       end

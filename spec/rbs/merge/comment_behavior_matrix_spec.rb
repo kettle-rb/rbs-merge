@@ -15,8 +15,8 @@ RSpec.describe Rbs::Merge::SmartMerger, "comment behavior matrix" do
         "type #{name} = #{value}"
       end,
       capabilities: {
-        inline_comments: "inline hash comments are not part of RBS syntax",
-        quoted_hash_inline_literals: "quoted values with trailing inline comments are not part of RBS syntax",
+        inline_comments: "intentional syntax limit: RBS has no inline comment form for these declarations, so this is not a pending matrix gap",
+        quoted_hash_inline_literals: "intentional syntax limit: quoted hash-inline comment scenarios do not exist in RBS syntax, so this is not a pending matrix gap",
       },
     )
   end

@@ -59,7 +59,7 @@ module Rbs
           comment_source_statement: comment_source_statement,
           comment_source_analysis: comment_source_analysis,
         )
-        @lines.concat(lines)
+        @lines.concat(deduplicate_leading_comment_overlap(lines))
         @decisions << {decision: decision, source: :template, index: index, lines: lines.length}
       end
 
@@ -77,7 +77,7 @@ module Rbs
           comment_source_statement: comment_source_statement,
           comment_source_analysis: comment_source_analysis,
         )
-        @lines.concat(lines)
+        @lines.concat(deduplicate_leading_comment_overlap(lines))
         @decisions << {decision: decision, source: :destination, index: index, lines: lines.length}
       end
 
@@ -92,7 +92,7 @@ module Rbs
         return if @emitted_freeze_blocks[freeze_key]
 
         lines = extract_lines(freeze_node, source_analysis)
-        @lines.concat(lines)
+        @lines.concat(deduplicate_leading_comment_overlap(lines))
         @emitted_freeze_blocks[freeze_key] = true
 
         # Determine source based on which analysis the freeze_node belongs to
@@ -117,7 +117,7 @@ module Rbs
         lines = merged_content.split("\n", -1)
         # Remove trailing empty element if content ended with newline
         lines.pop if lines.last == ""
-        @lines.concat(lines)
+        @lines.concat(deduplicate_leading_comment_overlap(lines))
         @decisions << {
           decision: DECISION_RECURSIVE,
           source: :merged,
@@ -132,7 +132,7 @@ module Rbs
       # @param decision [Symbol] Decision type
       # @return [void]
       def add_raw(lines, decision:)
-        @lines.concat(lines)
+        @lines.concat(deduplicate_leading_comment_overlap(lines))
         @decisions << {decision: decision, source: :raw, lines: lines.length}
       end
 
@@ -193,13 +193,14 @@ module Rbs
               output_statement: statement,
               output_analysis: analysis,
               source_region_start: region_start,
+              source_region: leading_region,
               source_analysis: leading_analysis,
             )
             leading_lines = (leading_start...source_start).filter_map { |ln| leading_analysis.line_at(ln) }
             body_lines = (start_line..end_line).map { |ln| analysis.line_at(ln) }
             return leading_lines + body_lines + trailing_lines_for(statement, analysis)
           end
-        elsif statement.respond_to?(:comment) && statement.comment
+        elsif native_comment_fallback_applicable?(statement, analysis)
           comment_start = statement.comment.location&.start_line
           start_line = comment_start if comment_start && comment_start < start_line
         end
@@ -259,6 +260,89 @@ module Rbs
         region.nodes.filter_map { |node| node.respond_to?(:line_number) ? node.line_number : nil }.min
       end
 
+      def native_comment_fallback_applicable?(statement, analysis)
+        return false if analysis&.respond_to?(:comment_attachment_for)
+
+        statement.respond_to?(:comment) && statement.comment
+      end
+
+      def deduplicate_leading_comment_overlap(lines)
+        return lines if @lines.empty? || lines.empty?
+
+        trailing_comments = trailing_standalone_comment_lines(@lines)
+        return lines if trailing_comments.empty?
+
+        leading_blank_count = 0
+        while leading_blank_count < lines.length && lines[leading_blank_count].to_s.strip.empty?
+          leading_blank_count += 1
+        end
+
+        leading_comments = leading_standalone_comment_lines(lines.drop(leading_blank_count))
+        return lines if leading_comments.empty?
+        return lines unless trailing_comments == leading_comments
+
+        lines.drop(leading_blank_count + leading_comments.length)
+      end
+
+      def trailing_standalone_comment_lines(lines)
+        comments = []
+        index = lines.length - 1
+
+        while index >= 0
+          line = lines[index].to_s
+          break if line.strip.empty?
+          break unless standalone_comment_line?(line)
+
+          comments.unshift(line)
+          index -= 1
+        end
+
+        comments
+      end
+
+      def leading_standalone_comment_lines(lines)
+        comments = []
+        index = 0
+
+        while index < lines.length
+          line = lines[index].to_s
+          break unless standalone_comment_line?(line)
+
+          comments << line
+          index += 1
+        end
+
+        comments
+      end
+
+      def standalone_comment_line?(line)
+        line.lstrip.start_with?("#")
+      end
+
+      def previous_statement_trailing_region_matches?(statement, analysis, source_region)
+        previous_statement = previous_statement_for(statement, analysis)
+        return false unless previous_statement
+
+        previous_trailing_region = analysis.comment_attachment_for(previous_statement)&.trailing_region
+        regions_equivalent?(previous_trailing_region, source_region)
+      end
+
+      def previous_statement_for(statement, analysis)
+        statements = Array(analysis&.statements).select { |entry| entry.respond_to?(:start_line) && entry.start_line }
+        index = statements.index(statement)
+        return unless index && index.positive?
+
+        statements[index - 1]
+      end
+
+      def regions_equivalent?(left, right)
+        return false unless left && right
+
+        left.respond_to?(:normalized_content) &&
+          right.respond_to?(:normalized_content) &&
+          left.normalized_content == right.normalized_content
+      end
+
       def preceding_blank_line_start(region_start, analysis)
         line_num = region_start
         while line_num > 1
@@ -271,22 +355,25 @@ module Rbs
         line_num
       end
 
-      def leading_segment_start_for_output(output_statement:, output_analysis:, source_region_start:, source_analysis:)
+      def leading_segment_start_for_output(output_statement:, output_analysis:, source_region_start:, source_region: nil, source_analysis:)
         source_region_start - desired_blank_line_count_before_leading_region(
           output_statement: output_statement,
           output_analysis: output_analysis,
           source_region_start: source_region_start,
+          source_region: source_region,
           source_analysis: source_analysis,
         )
       end
 
-      def desired_blank_line_count_before_leading_region(output_statement:, output_analysis:, source_region_start:, source_analysis:)
+      def desired_blank_line_count_before_leading_region(output_statement:, output_analysis:, source_region_start:, source_region: nil, source_analysis:)
         target_region = leading_region_for(output_statement, output_analysis)
         target_region_start = region_start_line(target_region)
         output_start_line = get_start_line(output_statement)
 
         if target_region_start && output_start_line && target_region_start < output_start_line
           blank_line_count_before(target_region_start, output_analysis)
+        elsif source_region && previous_statement_trailing_region_matches?(output_statement, output_analysis, source_region)
+          0
         else
           blank_line_count_before(source_region_start, source_analysis)
         end

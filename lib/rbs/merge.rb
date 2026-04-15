@@ -70,6 +70,9 @@ module Rbs
     # @api public
     class DestinationParseError < ParseError; end
 
+    # Raised when merge-time corruption detection is configured to error.
+    class CorruptionDetectedError < Error; end
+
     autoload :DebugLogger, "rbs/merge/debug_logger"
     autoload :CommentTracker, "rbs/merge/comment_tracker"
     autoload :FreezeNode, "rbs/merge/freeze_node"

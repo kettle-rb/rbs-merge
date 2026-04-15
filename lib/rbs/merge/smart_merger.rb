@@ -43,6 +43,8 @@ module Rbs
     # @see ConflictResolver
     # @see MergeResult
     class SmartMerger < ::Ast::Merge::SmartMergerBase
+      attr_reader :corruption_handling
+
       # Creates a new SmartMerger for intelligent RBS file merging.
       #
       # @param template_content [String] Template RBS source code
@@ -66,6 +68,8 @@ module Rbs
       #   - `true` - Add template-only nodes to result
       # @param remove_template_missing_nodes [Boolean] Controls whether to remove
       #   destination-only declarations while promoting their leading comments
+      # @param corruption_handling [Symbol] How to handle detected historical
+      #   duplicate-prefix corruption (:heal, :warn, :error, :skip)
       #
       # @param freeze_token [String] Token to use for freeze block markers.
       #   Default: "rbs-merge" (looks for # rbs-merge:freeze / # rbs-merge:unfreeze)
@@ -87,6 +91,7 @@ module Rbs
         preference: :destination,
         add_template_only_nodes: false,
         remove_template_missing_nodes: false,
+        corruption_handling: :heal,
         freeze_token: nil,
         match_refiner: nil,
         regions: nil,
@@ -97,6 +102,7 @@ module Rbs
       )
         @max_recursion_depth = max_recursion_depth
         @remove_template_missing_nodes = remove_template_missing_nodes
+        @corruption_handling = ::Ast::Merge::Healer.normalize_mode(corruption_handling)
         super(
           template_content,
           dest_content,
@@ -188,6 +194,10 @@ module Rbs
         process_alignment(alignment)
         emit_root_boundary(:postlude)
 
+        merged_content = @result.to_s
+        healed_content = collapse_cross_source_preamble_prefixes(merged_content)
+        update_result_content(@result, healed_content) if healed_content != merged_content
+
         @result
       end
 
@@ -236,6 +246,7 @@ module Rbs
         analysis, lines = preferred_root_boundary_lines(kind)
         return unless analysis
         return if lines.empty?
+        return if skip_root_boundary_lines?(kind, analysis, lines)
 
         decision = (analysis == @template_analysis) ? MergeResult::DECISION_TEMPLATE : MergeResult::DECISION_DESTINATION
         @result.add_raw(lines, decision: decision)
@@ -244,7 +255,7 @@ module Rbs
       def preferred_root_boundary_lines(kind)
         analyses = [preferred_root_boundary_analysis]
         fallback_analysis = (analyses.first == @template_analysis) ? @dest_analysis : @template_analysis
-        analyses << fallback_analysis
+        analyses << fallback_analysis if @add_template_only_nodes && !first_statement_has_leading_comments?(analyses.first)
 
         analyses.each do |analysis|
           lines = root_boundary_lines_for(kind, analysis)
@@ -257,6 +268,23 @@ module Rbs
       def preferred_root_boundary_analysis
         pref = @preference.is_a?(Hash) ? (@preference[:default] || :destination) : @preference
         (pref == :template) ? @template_analysis : @dest_analysis
+      end
+
+      def skip_root_boundary_lines?(kind, analysis, lines)
+        return false unless kind == :preamble
+        return false unless analysis.equal?(@template_analysis)
+        return false unless preferred_root_boundary_analysis.equal?(@template_analysis)
+
+        template_comments, = leading_standalone_comment_run(lines.join("\n"))
+        return false if template_comments.empty?
+
+        destination_first_statement = first_statement_for(@dest_analysis)
+        return false unless destination_first_statement
+
+        destination_leading_comments = leading_comment_lines_for(destination_first_statement, @dest_analysis)
+        return false if destination_leading_comments.empty?
+
+        true
       end
 
       def root_boundary_lines_for(kind, analysis)
@@ -316,6 +344,19 @@ module Rbs
           end
           [start_line, analysis.lines.length]
         end
+      end
+
+      def first_statement_for(analysis)
+        Array(analysis&.statements)
+          .select { |statement| statement.respond_to?(:start_line) && statement.start_line }
+          .min_by(&:start_line)
+      end
+
+      def first_statement_has_leading_comments?(analysis)
+        first_statement = first_statement_for(analysis)
+        return false unless first_statement
+
+        leading_comment_lines_for(first_statement, analysis).any?
       end
 
       # Process a matched declaration pair
@@ -385,15 +426,30 @@ module Rbs
       end
 
       def removed_declaration_comment_lines(decl, analysis)
+        attachment = analysis.comment_attachment_for(decl)
         leading_region = leading_region_for(decl, analysis)
         start_line = get_start_line(decl)
+        trailing_lines = if (trailing_region = attachment&.trailing_region)
+          trailing_region.nodes.filter_map do |node|
+            if node.respond_to?(:slice)
+              node.slice.to_s
+            elsif node.respond_to?(:text)
+              node.text.to_s
+            else
+              node.to_s
+            end
+          end
+        else
+          []
+        end
 
         if region_present?(leading_region)
           region_start = region_start_line(leading_region)
           if region_start && start_line && region_start < start_line
             leading_start = preceding_blank_line_start(region_start, analysis)
             lines = (leading_start...start_line).filter_map { |ln| analysis.line_at(ln) }
-            trailing_gap = analysis.comment_attachment_for(decl)&.trailing_gap
+            lines.concat(trailing_lines)
+            trailing_gap = attachment&.trailing_gap
             if trailing_gap&.effective_controller_side(removed_owners: [decl]) == :after
               lines.concat(trailing_gap.lines)
             end
@@ -403,6 +459,8 @@ module Rbs
           comment_start = decl.comment.location&.start_line
           return (comment_start...start_line).filter_map { |ln| analysis.line_at(ln) } if comment_start && start_line && comment_start < start_line
         end
+
+        return trailing_lines if trailing_lines.any?
 
         []
       end
@@ -465,6 +523,7 @@ module Rbs
               output_decl: decl,
               output_analysis: analysis,
               source_region_start: region_start,
+              source_region: leading_region,
               source_analysis: leading_analysis,
             )
             leading_lines = (leading_start...leading_end).filter_map { |ln| leading_analysis.line_at(ln) }
@@ -478,8 +537,10 @@ module Rbs
           end
         end
 
-        # Include leading comment if present (RBS gem nodes only)
-        if decl.respond_to?(:comment) && decl.comment
+        # Only fall back to native declaration comments when shared attachment
+        # support is unavailable. Once comment attachments exist they define the
+        # authoritative ownership boundary.
+        if native_comment_fallback_applicable?(decl, analysis)
           comment_loc = decl.comment.respond_to?(:location) ? decl.comment.location : nil
           if comment_loc
             comment_start = comment_loc.start_line
@@ -729,6 +790,7 @@ module Rbs
               output_decl: statement,
               output_analysis: analysis,
               source_region_start: region_start,
+              source_region: leading_region,
               source_analysis: leading_analysis,
             )
             (leading_start...leading_end).filter_map { |line_number| leading_analysis.line_at(line_number) }
@@ -791,6 +853,32 @@ module Rbs
         [nil, analysis, decl]
       end
 
+      def native_comment_fallback_applicable?(decl, analysis)
+        return false if analysis&.respond_to?(:comment_attachment_for)
+
+        decl.respond_to?(:comment) && decl.comment
+      end
+
+      def leading_comment_lines_for(statement, analysis)
+        leading_region = leading_region_for(statement, analysis)
+        return [] unless region_present?(leading_region)
+
+        region_start = region_start_line(leading_region)
+        statement_start = get_start_line(statement)
+        return [] unless region_start && statement_start && region_start < statement_start
+
+        leading_start = leading_segment_start_for_output(
+          output_decl: statement,
+          output_analysis: analysis,
+          source_region_start: region_start,
+          source_region: leading_region,
+          source_analysis: analysis,
+        )
+        lines = (leading_start...statement_start).filter_map { |line_number| analysis.line_at(line_number) }
+        comments, = leading_standalone_comment_run(lines.join("\n"))
+        comments
+      end
+
       def leading_region_for(decl, analysis)
         return unless decl && analysis&.respond_to?(:comment_attachment_for)
 
@@ -825,22 +913,25 @@ module Rbs
         line_num
       end
 
-      def leading_segment_start_for_output(output_decl:, output_analysis:, source_region_start:, source_analysis:)
+      def leading_segment_start_for_output(output_decl:, output_analysis:, source_region_start:, source_region: nil, source_analysis:)
         source_region_start - desired_blank_line_count_before_leading_region(
           output_decl: output_decl,
           output_analysis: output_analysis,
           source_region_start: source_region_start,
+          source_region: source_region,
           source_analysis: source_analysis,
         )
       end
 
-      def desired_blank_line_count_before_leading_region(output_decl:, output_analysis:, source_region_start:, source_analysis:)
+      def desired_blank_line_count_before_leading_region(output_decl:, output_analysis:, source_region_start:, source_region: nil, source_analysis:)
         target_region = leading_region_for(output_decl, output_analysis)
         target_region_start = region_start_line(target_region)
         output_start_line = get_start_line(output_decl)
 
         if target_region_start && output_start_line && target_region_start < output_start_line
           blank_line_count_before(target_region_start, output_analysis)
+        elsif source_region && previous_statement_trailing_region_matches?(output_decl, output_analysis, source_region)
+          0
         else
           blank_line_count_before(source_region_start, source_analysis)
         end
@@ -859,6 +950,95 @@ module Rbs
         end
 
         count
+      end
+
+      def previous_statement_trailing_region_matches?(decl, analysis, source_region)
+        previous_decl = previous_statement_for(decl, analysis)
+        return false unless previous_decl
+
+        previous_trailing_region = analysis.comment_attachment_for(previous_decl)&.trailing_region
+        regions_equivalent?(previous_trailing_region, source_region)
+      end
+
+      def previous_statement_for(decl, analysis)
+        statements = Array(analysis&.statements).select { |statement| statement.respond_to?(:start_line) && statement.start_line }
+        index = statements.index(decl)
+        return unless index && index.positive?
+
+        statements[index - 1]
+      end
+
+      def regions_equivalent?(left, right)
+        return false unless left && right
+
+        left.respond_to?(:normalized_content) &&
+          right.respond_to?(:normalized_content) &&
+          left.normalized_content == right.normalized_content
+      end
+
+      STANDALONE_RBS_COMMENT_LINE_RE = /\A\s*#.*\z/
+      private_constant :STANDALONE_RBS_COMMENT_LINE_RE
+
+      def collapse_cross_source_preamble_prefixes(content)
+        template_comments, = leading_standalone_comment_run(@template_content.to_s)
+        return content if template_comments.empty?
+
+        merged_comments, remainder = leading_standalone_comment_run(content)
+        return content if merged_comments.empty?
+
+        template_tally = template_comments.tally
+        merged_tally = merged_comments.tally
+        duplicated_template_prefix = template_tally.any? do |line, count|
+          merged_tally.fetch(line, 0) > count
+        end
+        return content unless duplicated_template_prefix
+
+        destination_specific_comments = merged_comments.reject { |line| template_comments.include?(line) }
+        return content if destination_specific_comments.empty?
+
+        should_heal = ::Ast::Merge::Healer.handle(
+          mode: @corruption_handling,
+          kind: :duplicate_template_preamble_prefix,
+          message: "merged RBS preamble begins with duplicated template-owned comment lines",
+          prefix: "[rbs-merge]",
+          error_class: Rbs::Merge::CorruptionDetectedError,
+          warner: lambda { |formatted|
+            DebugLogger.debug_warning(formatted, {
+              template_comment_lines: template_comments.length,
+              merged_comment_lines: merged_comments.length,
+              destination_specific_comment_lines: destination_specific_comments.length,
+            })
+          },
+        )
+        return content unless should_heal
+
+        remainder = remainder.sub(/\A(?:\s*\n)+/, "")
+        rebuilt = destination_specific_comments.join("\n")
+        return rebuilt if remainder.empty?
+
+        "#{rebuilt}\n\n#{remainder}"
+      end
+
+      def leading_standalone_comment_run(text)
+        lines = text.to_s.split("\n", -1)
+        comment_lines = []
+        index = 0
+
+        while index < lines.length
+          line = lines[index]
+          if line.strip.empty?
+            comment_lines << line if comment_lines.any?
+            index += 1
+            next
+          end
+
+          break unless STANDALONE_RBS_COMMENT_LINE_RE.match?(line)
+
+          comment_lines << line
+          index += 1
+        end
+
+        [comment_lines, lines.drop(index).join("\n")]
       end
 
       # Get start line for a declaration (works with both backends)

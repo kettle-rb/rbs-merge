@@ -166,7 +166,7 @@ module Rbs
           if region_start && region_start < start_line
             lines.concat((region_start...start_line).filter_map { |ln| analysis.line_at(ln) })
           end
-        elsif decl.respond_to?(:comment) && decl.comment
+        elsif native_comment_fallback_applicable?(decl, analysis)
           comment_start = decl.comment.location&.start_line
           if comment_start && comment_start < start_line
             lines.concat((comment_start...start_line).filter_map { |ln| analysis.line_at(ln) })
@@ -182,6 +182,10 @@ module Rbs
 
         attachment = analysis.comment_attachment_for(decl)
         attachment.leading_region if attachment.respond_to?(:leading_region)
+      end
+
+      def native_comment_fallback_applicable?(decl, analysis)
+        decl.respond_to?(:comment) && decl.comment
       end
 
       def region_present?(region)
