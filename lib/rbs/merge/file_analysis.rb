@@ -162,6 +162,14 @@ module Rbs
         :normalize_tracked_layout_merge
       end
 
+      def ruleset_owner_selector
+        :rbs_declarations
+      end
+
+      def ruleset_render_family
+        :rbs_declarations
+      end
+
       # Build a passive shared comment augmenter for this analysis.
       #
       # @param owners [Array<#start_line,#end_line>, nil] Owners used for attachment inference
